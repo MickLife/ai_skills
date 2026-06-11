@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Dead-code scanner outputs
+dead_code_candidates*.json
+dead_code_report*.md
+*_candidates*.json
+whitelist.py
