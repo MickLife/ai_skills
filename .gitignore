@@ -12,6 +12,10 @@ env/
 
 # Dead-code scanner outputs
 dead_code_candidates*.json
+dead_code_review_plan*.json
+dead_code_review_chunk*.json
+dead_code_validation*.json
+dead_code_wave*.json
 dead_code_report*.md
 *_candidates*.json
 whitelist.py
