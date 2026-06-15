@@ -20,6 +20,7 @@ from typing import Optional
 
 @dataclass
 class Candidate:
+    id: str
     tool: str
     file: str
     line: int
@@ -100,6 +101,7 @@ def run_vulture(
         message = match.group("msg")
         candidates.append(
             Candidate(
+                id="",
                 tool="vulture",
                 file=match.group("file"),
                 line=int(match.group("line")),
@@ -155,6 +157,7 @@ def run_ruff(target: str) -> list[Candidate]:
         location = item.get("location") or {}
         candidates.append(
             Candidate(
+                id="",
                 tool="ruff",
                 file=item.get("filename", ""),
                 line=location.get("row", 0),
@@ -238,7 +241,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     ]
 
     whitelist_symbols = _read_whitelist_symbols(args.whitelist)
-    for candidate in candidates:
+    for index, candidate in enumerate(candidates, start=1):
+        candidate.id = f"DC{index:06d}"
         if candidate.symbol and candidate.symbol in whitelist_symbols:
             candidate.in_whitelist = True
 

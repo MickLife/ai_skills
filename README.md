@@ -27,4 +27,4 @@ dev_skills/
 
 ## Skills
 
-- `dead-code-scanner`: 扫描 Python 工程死代码候选，并要求 AI 逐条复核动态调用误报。
+- `dead-code-scanner`: 扫描 Python 工程死代码候选，通过 wave 迭代、子 agent 分片复核和报告校验降低误删风险。

@@ -7,20 +7,86 @@ description: Use when scanning Python projects for dead code, unreachable code, 
 
 ## Overview
 
-目标是找出 Python 工程里真正可以删除的死代码，并给出可信理由。工具只负责穷举候选；AI 必须逐条复核，排除反射、装饰器注册、框架路由、入口点、公共 API 等动态使用场景。
+目标是找出 Python 工程里真正可以删除的死代码，并给出可信理由。工具只负责穷举候选；AI 必须逐条复核，排除反射、装饰器注册、框架路由、入口点、公共 API 等动态使用场景。大型仓库必须使用分片和子 agent，主 agent 只做调度、汇总和校验。
 
 ## Quick Start
 
 1. 确认扫描范围和排除目录。常见目标是 `src`、包目录或单个模块；常见排除是 `tests`、`migrations`、`.venv`、`build`。
 2. 安装依赖：`pip install -r <skill-directory>/requirements.txt`。
 3. 查看脚本用法：`python <skill-directory>/scripts/scan.py --help`。
-4. 生成候选 JSON：
+4. 生成 wave 0 候选 JSON：
 
 ```bash
-python <skill-directory>/scripts/scan.py <target> --min-confidence 80 --exclude "*/tests/*,*/migrations/*" --whitelist whitelist.py --out dead_code_candidates.json
+python <skill-directory>/scripts/scan.py <target> --min-confidence 80 --exclude "*/tests/*,*/migrations/*" --whitelist whitelist.py --out dead_code_candidates_wave0.json
 ```
 
-5. 读取 `dead_code_candidates.json`，逐条复核源码上下文，产出 `dead_code_report.md`。
+5. 生成复核计划：`python <skill-directory>/scripts/plan_review.py dead_code_candidates_wave0.json --out dead_code_review_plan_wave0.json`。
+6. 按 chunk 复核候选，产出 chunk review JSON。
+7. 完成前必须运行：`python <skill-directory>/scripts/validate_reviews.py dead_code_candidates_wave0.json <chunk-review-json...> --plan dead_code_review_plan_wave0.json`。
+8. 只有校验通过后，才能汇总最终报告并请求 user 确认删除。
+
+## Deletion Waves
+
+死代码删除必须迭代处理，因为存在**连锁删除效应**：第一轮删除的函数、类或模块，可能是另一批旧代码唯一的引用来源。删除前，那些下游代码看起来“仍被使用”；删除后，它们才会在下一轮扫描中变成新的死代码候选。因此，单轮扫描只能发现当前图上的叶子节点，不能一次性证明整条废弃调用链都已经暴露。
+
+每个 wave 表示一次“小批确认删除 + 测试 + 重新扫描”的闭环。删除一批确认可删项后，重新扫描并比较前后结果：
+
+```bash
+python <skill-directory>/scripts/scan.py <target> --out dead_code_candidates_wave1.json
+python <skill-directory>/scripts/compare_waves.py dead_code_candidates_wave0.json dead_code_candidates_wave1.json --out dead_code_wave0_to_wave1.json
+```
+
+- 新出现的候选归为 `new`，必须重新复核，不能自动判定可删。
+- 消失的候选归为 `resolved`。
+- 仍存在的候选归为 `carried_over`。
+- 每个 wave 只删除 user 已确认的低风险项；测试失败时停止本 wave。
+
+## Multi-Agent Review
+
+当候选数超过 30，主 agent 不得独自复核全部候选，必须按 `plan_review.py` 的 chunk 分片。候选数超过 80 时，应并行派发子 agent。
+
+主 agent 职责：
+
+- 运行扫描、分片、校验和 wave 比较脚本。
+- 给每个子 agent 分配一个 chunk。
+- 汇总 chunk review。
+- 校验覆盖率和格式。
+- 输出最终报告。
+
+子 agent 职责：
+
+- 只处理指定 `chunk_id` 和候选 ID。
+- 必须逐条复核，不能跳过。
+- 必须读取必要源码和引用上下文。
+- 不得删除代码。
+- 不得输出最终报告。
+- 不确定时标记 `suspected_deletable`，不能猜。
+
+子 agent prompt 必须包含：
+
+```markdown
+You are a dead-code-scanner review subagent.
+
+Scope:
+- Chunk ID: <chunk_id>
+- Candidate IDs: <ids>
+- Allowed paths: <paths>
+
+For every candidate, return:
+- candidate_id
+- status: confirmed_deletable | suspected_deletable | false_positive
+- file
+- candidate_line
+- symbol
+- kind
+- removal_range
+- removable_lines
+- evidence
+- risk
+- recommended_action
+
+Do not delete code. Do not produce the final report.
+```
 
 ## Review Checklist
 
@@ -49,16 +115,23 @@ python <skill-directory>/scripts/scan.py <target> --min-confidence 80 --exclude 
 
 ## Report Format
 
-生成 `dead_code_report.md`，按三类分组。每条包含：
+最终报告必须固定格式。每条候选必须出现一次，并包含：
 
-- `file:line`
+- `candidate_id`
+- `status`
+- `file`
+- `candidate_line`
 - `kind`
 - `symbol`
-- 复核结论
-- 理由
-- 建议动作
+- `removal_range`
+- `removable_lines`
+- `evidence`
+- `risk`
+- `recommended_action`
 
-报告开头写一句总览：总候选数、确定可删数、疑似可删数、误报数。
+Summary 必须包含：candidate file、total candidates、reviewed candidates、confirmed deletable、suspected deletable、false positives、total removable lines、review status。
+
+如果 `validate_reviews.py` 失败，报告状态必须是 `INCOMPLETE`，不能向 user 声称复核完成。
 
 ## Whitelist
 
@@ -70,4 +143,7 @@ python <skill-directory>/scripts/scan.py <target> --min-confidence 80 --exclude 
 - 不要自动删除代码；先给 user 确认清单。
 - 复核 `unused_function`、`unused_method`、`unused_class` 前必须读取源码和引用上下文。
 - 对有副作用的未使用变量，通常改为保留调用、删除赋值，而不是删除整行。
+- 候选数超过 30 时必须分片；候选数超过 80 时必须派发子 agent。
+- 最终报告前必须运行 `validate_reviews.py`。
+- 删除后必须进入下一轮 wave 扫描，并用 `compare_waves.py` 比较变化。
 - 静态分析不能证明 Python 动态代码完全不可达；有测试时建议用 `coverage run -m pytest && coverage report -m` 交叉验证。
