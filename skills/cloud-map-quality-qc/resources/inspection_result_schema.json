@@ -1,0 +1,294 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CloudMapQualityInspectionResult",
+  "type": "object",
+  "required": [
+    "region_id",
+    "inspection_version",
+    "enabled_checks",
+    "findings",
+    "summary",
+    "needs_human_review"
+  ],
+  "properties": {
+    "region_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "inspection_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "enabled_checks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "summary": {
+      "type": "string"
+    },
+    "needs_human_review": {
+      "type": "boolean"
+    },
+    "assets_used": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "required": [
+        "issue_type",
+        "subtype",
+        "confidence",
+        "severity",
+        "location",
+        "evidence",
+        "reason",
+        "possible_false_positives",
+        "needs_human_review"
+      ],
+      "properties": {
+        "issue_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subtype": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "location": {
+          "$ref": "#/$defs/location"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "minItems": 1
+        },
+        "reason": {
+          "type": "string"
+        },
+        "possible_false_positives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "needs_human_review": {
+          "type": "boolean"
+        },
+        "detector_version": {
+          "type": "string"
+        },
+        "detector_config": {
+          "type": "object"
+        },
+        "assets_used": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "detector_payload": {
+          "type": "object",
+          "description": "Issue-specific extension payload controlled by the detector definition."
+        }
+      },
+      "additionalProperties": false
+    },
+    "location": {
+      "type": "object",
+      "properties": {
+        "coordinate_frame": {
+          "type": "string"
+        },
+        "center_xyz": {
+          "$ref": "#/$defs/xyz"
+        },
+        "extent_xyz": {
+          "$ref": "#/$defs/xyz"
+        },
+        "tile_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tile_ref"
+          }
+        },
+        "polygon": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/xyz"
+          },
+          "minItems": 3
+        },
+        "polyline": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/xyz"
+          },
+          "minItems": 2
+        },
+        "coverage_cells": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "grid_id",
+              "cell_id"
+            ],
+            "properties": {
+              "grid_id": {
+                "type": "string"
+              },
+              "cell_id": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "tile_ref": {
+      "type": "object",
+      "required": [
+        "tile_id",
+        "asset_id"
+      ],
+      "properties": {
+        "tile_id": {
+          "type": "string"
+        },
+        "asset_id": {
+          "type": "string"
+        },
+        "pixel_bbox": {
+          "$ref": "#/$defs/pixel_bbox"
+        },
+        "pixel_polygon": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pixel_xy"
+          },
+          "minItems": 3
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "evidence_type",
+        "asset_id",
+        "description"
+      ],
+      "properties": {
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "visual_cue",
+            "geometric_cue",
+            "trajectory_cue",
+            "coverage_cue",
+            "semantic_cue",
+            "metadata_cue",
+            "model_reasoning"
+          ]
+        },
+        "asset_id": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "confidence_contribution": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "xyz": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "pixel_xy": {
+      "type": "object",
+      "required": [
+        "x",
+        "y"
+      ],
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "pixel_bbox": {
+      "type": "object",
+      "required": [
+        "x_min",
+        "y_min",
+        "x_max",
+        "y_max"
+      ],
+      "properties": {
+        "x_min": {
+          "type": "number"
+        },
+        "y_min": {
+          "type": "number"
+        },
+        "x_max": {
+          "type": "number"
+        },
+        "y_max": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

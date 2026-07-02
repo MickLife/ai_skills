@@ -1,0 +1,126 @@
+# {{project_name}} — 架构设计文档
+
+> 元信息
+> - 根路径：`{{root}}`
+> - 分析模式：`{{mode}}`（{{mode_detail}}）
+> - 深度：`{{depth}}`
+> - 输出格式：`{{output_format}}`
+> - 生成时间：`{{timestamp}}`
+> - 宿主 agent：`{{host_agent}}`
+> - token 预算：`{{token_budget}}`
+
+## 1. 执行摘要
+
+<!-- 3–5 句话：这是什么系统、解决什么问题、核心设计取舍。 -->
+
+## 2. 设计目标与非目标
+
+**目标**
+- ...
+
+**非目标**
+- ...
+
+## 3. 系统总览图
+
+<!-- HTML 模式：手绘内联 SVG；markdown 模式：Mermaid flowchart -->
+
+```mermaid
+flowchart LR
+    subgraph "核心"
+    M1[模块1]
+    M2[模块2]
+    end
+    M1 --> M2
+```
+
+## 4. 技术栈
+
+| 语言 | LOC | 占比 |
+|---|---|---|
+| Python | {{py_loc}} | {{py_pct}} |
+| C/C++ | {{cpp_loc}} | {{cpp_pct}} |
+
+- 构建系统：{{build_systems}}
+- 关键依赖：{{key_deps}}
+
+## 5. 模块图
+
+```mermaid
+flowchart LR
+    subgraph "模块依赖"
+    %% 按簇分 subgraph
+    end
+```
+
+## 6. 模块清单
+
+| 模块 | 路径 | 职责 | 文档 |
+|---|---|---|---|
+| {{module_name}} | {{module_path}} | {{responsibility}} | [详见](modules/{{module_name}}.md) |
+
+## 7. 关键数据流
+
+```mermaid
+flowchart LR
+    %% 主路径数据流
+```
+
+## 8. 关键时序
+
+```mermaid
+sequenceDiagram
+    participant A
+    participant B
+    A->>B: 请求
+    B-->>A: 响应
+```
+
+## 9. 横切关注
+
+- **错误处理**：...
+- **配置管理**：...
+- **日志/可观测性**：...
+- **并发模型**：...
+- **安全/鉴权**：...
+
+## 10. 构建与部署
+
+- 构建：`{{build_cmd}}`
+- 测试：`{{test_cmd}}`
+- 运行：`{{run_cmd}}`
+- 产物结构：...
+- 部署拓扑：...
+
+## 11. 跨仓图（仅多仓）
+
+<!-- 见 cross-repo-map.md -->
+
+## 12. 关键函数/类型表
+
+| 符号 | 位置 | 用途 |
+|---|---|---|
+| {{symbol}} | `{{file}}:{{lines}}` | {{purpose}} |
+
+## 13. 坑点与陷阱
+
+- {{gotcha}} —— `{{file}}:{{line}}`
+
+## 14. 扩展点
+
+- 新增 {{feature}} 应改 {{module}}。
+
+## 15. 术语表
+
+| 术语 | 含义 |
+|---|---|
+
+## 16. 注意事项 / 未分析部分
+
+- 假设：...
+- 未解析项：...
+- 入口模式范围边界：...（仅入口模式）
+
+## 17. 引用
+
+所有引用格式 `path:line` 或 `path:start-end`。
