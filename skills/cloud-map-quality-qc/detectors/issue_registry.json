@@ -1,0 +1,33 @@
+{
+  "registry_version": "0.1.0",
+  "issues": [
+    {
+      "issue_type": "layering",
+      "display_name": "点云叠层",
+      "enabled_by_default": true,
+      "definition_file": "detectors/layering.md",
+      "detector_version": "0.1.0",
+      "required_asset_types": [
+        "bev_semantic_image"
+      ],
+      "optional_asset_types": [
+        "bev_height_image",
+        "bev_density_image",
+        "bev_intensity_image",
+        "trajectory_overlay",
+        "trajectory",
+        "point_cloud",
+        "tile_metadata"
+      ],
+      "subtypes": [
+        "vertical_layering",
+        "horizontal_ghosting",
+        "multi_pass_misalignment",
+        "semantic_layer_disagreement",
+        "ambiguous_layering"
+      ],
+      "default_confidence_threshold": 0.7,
+      "requires_human_review_below_confidence": 0.7
+    }
+  ]
+}
