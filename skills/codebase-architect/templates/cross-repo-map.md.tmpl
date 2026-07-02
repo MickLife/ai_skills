@@ -1,0 +1,57 @@
+# 跨仓关系图
+
+> 父目录：`{{root}}`
+> 仓库数：{{repo_count}}
+
+## 1. 仓库清单
+
+| 仓库名 | 路径 | 角色 | 语言 | 构建系统 | 入口 |
+|---|---|---|---|---|---|
+| {{name}} | `{{path}}` | {{role}} | {{lang}} | {{build}} | {{entry}} |
+
+## 2. 跨仓依赖图
+
+```mermaid
+flowchart LR
+    subgraph "仓库"
+    RepoA[仓A]
+    RepoB[仓B]
+    RepoC[仓C]
+    end
+    RepoA -->|include| RepoB
+    RepoC -->|import| RepoB
+```
+
+## 3. 跨仓边详表
+
+| 类型 | 源仓 | 目标仓 | 源行 | 说明 |
+|---|---|---|---|---|
+| include | 仓A | 仓B | `仓A/src/x.cpp:12` | `#include <shared/types.h>` |
+| import | 仓C | 仓B | `仓C/lib/y.py:3` | `from shared_lib import types` |
+| build | 仓A | 仓B | `仓A/CMakeLists.txt:40` | `FetchContent_Declare(shared ...)` |
+| FFI | 仓C | 仓B | `仓C/bindings/z.py:8` | pybind11 绑定 |
+
+边类型：`import` / `include` / `build` / `FFI` / `contract`
+
+## 4. 契约消费图
+
+```mermaid
+flowchart LR
+    Contract[契约仓]
+    Contract -->|被消费| RepoA
+    Contract -->|被消费| RepoB
+```
+
+| 契约 | 定义仓 | 消费仓 |
+|---|---|---|
+| {{contract}} | `{{def_repo}}` | {{consumers}} |
+
+## 5. 构建/部署拓扑
+
+- 产物：{{artifact}}
+- 链接关系：{{repo}} → {{repo}}
+
+## 6. 跨仓开发指南
+
+- 改 `{{contract}}` 影响：{{consumers}}，需按 {{order}} 顺序重建。
+- 改共享头 `{{header}}` 影响：{{consumers}}。

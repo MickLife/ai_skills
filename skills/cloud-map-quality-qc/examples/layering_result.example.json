@@ -1,0 +1,74 @@
+{
+  "region_id": "region_demo_001",
+  "inspection_version": "0.1.0",
+  "enabled_checks": [
+    "layering"
+  ],
+  "summary": "发现 1 处疑似点云叠层，需要人工复核。",
+  "needs_human_review": true,
+  "assets_used": [
+    "bev_semantic_main",
+    "trajectory_overlay_main"
+  ],
+  "findings": [
+    {
+      "issue_type": "layering",
+      "subtype": "horizontal_ghosting",
+      "confidence": 0.82,
+      "severity": "high",
+      "location": {
+        "coordinate_frame": "map_enu",
+        "center_xyz": [
+          123.4,
+          456.7,
+          8.9
+        ],
+        "extent_xyz": [
+          12.0,
+          4.0,
+          1.0
+        ],
+        "tile_refs": [
+          {
+            "tile_id": "tile_001",
+            "asset_id": "bev_semantic_main",
+            "pixel_bbox": {
+              "x_min": 128,
+              "y_min": 256,
+              "x_max": 420,
+              "y_max": 380
+            }
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "evidence_type": "visual_cue",
+          "asset_id": "bev_semantic_main",
+          "description": "同一语义边界出现平行重复轮廓。",
+          "confidence_contribution": 0.45
+        },
+        {
+          "evidence_type": "trajectory_cue",
+          "asset_id": "trajectory_overlay_main",
+          "description": "疑似区域靠近多趟轨迹交汇位置。",
+          "confidence_contribution": 0.25
+        }
+      ],
+      "reason": "BEV 语义图中静态边界出现局部平行重影，并与轨迹交汇区域重合，符合水平 ghosting 型叠层特征。",
+      "possible_false_positives": [
+        "真实双路沿",
+        "施工隔离带"
+      ],
+      "needs_human_review": true,
+      "detector_version": "0.1.0",
+      "assets_used": [
+        "bev_semantic_main",
+        "trajectory_overlay_main"
+      ],
+      "detector_payload": {
+        "layering_evidence_count": 2
+      }
+    }
+  ]
+}

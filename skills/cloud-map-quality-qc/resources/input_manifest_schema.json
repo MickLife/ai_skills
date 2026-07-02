@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CloudMapQualityInputManifest",
+  "type": "object",
+  "required": [
+    "region_id",
+    "inspection_scope",
+    "enabled_checks",
+    "assets"
+  ],
+  "properties": {
+    "region_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "inspection_scope": {
+      "type": "object",
+      "required": [
+        "coordinate_frame"
+      ],
+      "properties": {
+        "coordinate_frame": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bounds": {
+          "type": "object",
+          "description": "Optional spatial bounds. Shape is project-specific and may be validated by downstream scripts."
+        },
+        "time_range": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "start",
+                "end"
+              ],
+              "properties": {
+                "start": {
+                  "type": "string"
+                },
+                "end": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "enabled_checks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "asset_id",
+          "asset_type",
+          "uri",
+          "role"
+        ],
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "asset_type": {
+            "type": "string",
+            "enum": [
+              "bev_semantic_image",
+              "bev_height_image",
+              "bev_density_image",
+              "bev_intensity_image",
+              "trajectory_overlay",
+              "trajectory",
+              "point_cloud",
+              "coverage_grid",
+              "coverage_mask",
+              "tile_metadata",
+              "custom"
+            ]
+          },
+          "uri": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "coordinate_frame": {
+            "type": "string"
+          },
+          "metadata_uri": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "properties": {
+            "type": "object",
+            "description": "Project-specific asset metadata such as resolution, semantic version, vehicle id, or collection batch."
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "runtime_options": {
+      "type": "object",
+      "properties": {
+        "tile_size": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1024
+        },
+        "overlap": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 128
+        },
+        "confidence_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.7
+        },
+        "include_ambiguous_findings": {
+          "type": "boolean",
+          "default": true
+        },
+        "max_tiles_per_request": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
