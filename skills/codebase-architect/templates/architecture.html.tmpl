@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<!--
+  codebase-architect — 架构设计文档模板（单文件自包含 · 浅色暖色调）
+  用法：
+    1. 复制本文件为 docs/ARCHITECTURE.html，替换 {{占位符}} 与各 <section> 内容。
+       重要：下面的视图章节是"候选菜单"，不是必填清单。没有对应设计内容的视图章节请
+       直接删除（连同其 <h2>/<h3>），并把保留章节重新连续编号；绝不要留占位符或用套话
+       硬填空视图——硬填空视图＝变相臆测。每张图都要配文字：图前讲设计意图、图后给关键点解读。
+    2. 全部样式与脚本已内联；左侧导航由 JS 从 h1~h4 自动生成，无需手动维护目录。
+    3. 图表使用 Mermaid（<pre class="mermaid">…</pre>）：
+       - 默认通过 CDN 加载 mermaid.js（查看时需联网）。
+       - 需完全离线时：把 mermaid.min.js 放到 docs/assets/，并把页尾 <script src> 改为相对路径 "assets/mermaid.min.js"。
+    4. 顶层"系统上下文图"可用手绘内联 <svg> 以获得更定制的观感；其余系统化视图统一用 Mermaid。
+    5. 表格：每个 <table> 都必须用 <div class="table-wrap">…</div> 包裹。长的类名/文件路径/模块名
+       放进 <span class="src-ref">，会在单元格内自动换行，不会撑破右侧正文栏；确实很宽的多列表格则在
+       表格内横向滚动。新增表格时务必沿用这一包裹结构。
+    6. 章节骨架遵循 4+1 视图 + DFD + UML + 泳道图，详见 references/architecture-views.md 与 references/output-format.md。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{project_name}} · 架构设计文档</title>
+<style>
+  :root {
+    /* —— 浅色暖色调配色 —— */
+    --bg:            #FBF6EF;   /* 页面底色：暖米白 */
+    --sidebar-bg:    #F5EADC;   /* 侧栏：更深一点的暖砂 */
+    --surface:       #FFFFFF;   /* 卡片/代码块表面 */
+    --surface-warm:  #FFF9F1;   /* 暖白表面 */
+    --text:          #4A3F35;   /* 正文：暖棕灰 */
+    --text-soft:     #6E6156;   /* 次级文字 */
+    --text-muted:    #9B8A79;   /* 弱化文字 */
+    --primary:       #C0603A;   /* 主强调：赤陶 */
+    --primary-deep:  #A34E2E;   /* 主强调深色（hover/active） */
+    --primary-soft:  #EBD1BD;   /* 主强调浅背景 */
+    --accent:        #CC8A2E;   /* 次强调：琥珀金 */
+    --border:        #E7D8C6;   /* 边框 */
+    --border-soft:   #F0E6D8;   /* 更浅边框 */
+    --code-bg:       #F5EBDD;   /* 内联代码底 */
+    --code-text:     #9A4E28;   /* 内联代码字 */
+    --block-bg:      #2E2823;   /* 代码块底（暖深棕，非纯黑） */
+    --block-text:    #F3E9DB;   /* 代码块字 */
+    --quote-bg:      #FBEEDD;   /* 引用块底 */
+    --quote-bar:     #D9A441;   /* 引用块左条 */
+    --shadow:        0 1px 3px rgba(120, 80, 40, .08), 0 6px 20px rgba(120, 80, 40, .06);
+    --radius:        10px;
+    --sidebar-w:     288px;
+    --content-max:   880px;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    --font-mono: "SFMono-Regular", "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* —— 布局：左侧栏 + 右主体 —— */
+  .layout { display: flex; align-items: flex-start; }
+
+  .sidebar {
+    width: var(--sidebar-w);
+    flex: 0 0 var(--sidebar-w);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 26px 18px 40px;
+  }
+  .sidebar::-webkit-scrollbar { width: 8px; }
+  .sidebar::-webkit-scrollbar-thumb { background: #E0CBB2; border-radius: 8px; }
+
+  .sidebar .brand {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: .3px;
+    padding: 0 10px 6px;
+  }
+  .sidebar .brand small {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+  .toc-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-muted);
+    margin: 20px 10px 8px;
+  }
+
+  /* —— 目录导航（JS 自动生成 a.toc-link） —— */
+  .toc { display: flex; flex-direction: column; }
+  .toc-link {
+    display: block;
+    color: var(--text-soft);
+    text-decoration: none;
+    font-size: 13.5px;
+    line-height: 1.5;
+    padding: 5px 10px;
+    border-radius: 7px;
+    border-left: 2px solid transparent;
+    transition: background .15s, color .15s, border-color .15s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .toc-link:hover { background: var(--primary-soft); color: var(--primary-deep); }
+  .toc-link.active {
+    background: var(--surface-warm);
+    color: var(--primary-deep);
+    font-weight: 600;
+    border-left-color: var(--primary);
+  }
+  .toc-l1 { padding-left: 10px; font-weight: 600; color: var(--text); margin-top: 6px; }
+  .toc-l2 { padding-left: 22px; }
+  .toc-l3 { padding-left: 36px; font-size: 13px; }
+  .toc-l4 { padding-left: 50px; font-size: 12.5px; color: var(--text-muted); }
+
+  /* —— 主体内容 —— */
+  .content {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 48px 56px 120px;
+    max-width: calc(var(--content-max) + 112px);
+    margin: 0 auto;
+  }
+
+  /* —— 标题（4 级） —— */
+  .content h1, .content h2, .content h3, .content h4 { scroll-margin-top: 24px; color: var(--text); line-height: 1.3; }
+  .content h1 {
+    font-size: 30px;
+    font-weight: 800;
+    margin: 8px 0 6px;
+    padding-bottom: 14px;
+    border-bottom: 3px solid var(--primary-soft);
+  }
+  .content h1 .doc-sub { display:block; font-size:14px; font-weight:500; color:var(--text-muted); margin-top:8px; }
+  .content h2 {
+    font-size: 23px;
+    font-weight: 700;
+    margin: 52px 0 14px;
+    padding-left: 12px;
+    border-left: 5px solid var(--primary);
+  }
+  .content h3 {
+    font-size: 18.5px;
+    font-weight: 700;
+    color: var(--primary-deep);
+    margin: 32px 0 10px;
+  }
+  .content h4 {
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 22px 0 8px;
+    letter-spacing: .2px;
+  }
+
+  .content p { margin: 12px 0; }
+
+  /* —— 强调：加粗 / 斜体 —— */
+  .content strong { font-weight: 700; color: var(--primary-deep); }
+  .content em { font-style: italic; color: var(--text-soft); }
+
+  /* —— 内联代码 —— */
+  .content :not(pre) > code {
+    font-family: var(--font-mono);
+    font-size: .88em;
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 2px 6px;
+    border-radius: 5px;
+    border: 1px solid var(--border-soft);
+    word-break: break-word;
+  }
+
+  /* —— 代码块（排除 Mermaid 容器） —— */
+  .content pre:not(.mermaid) {
+    background: var(--block-bg);
+    color: var(--block-text);
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.6;
+    padding: 16px 18px;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    margin: 16px 0;
+    box-shadow: var(--shadow);
+    tab-size: 4;
+  }
+  .content pre:not(.mermaid) code { background: none; border: none; color: inherit; padding: 0; font-size: inherit; }
+  .content pre:not(.mermaid)::-webkit-scrollbar { height: 9px; }
+  .content pre:not(.mermaid)::-webkit-scrollbar-thumb { background: #5A4E44; border-radius: 8px; }
+
+  /* Mermaid 容器：渲染前后都保持透明，融入暖色卡片背景 */
+  pre.mermaid {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    color: var(--text);
+    text-align: center;
+    overflow: visible;
+    line-height: 1.4;
+  }
+  /* 渲染前的源码占位不刺眼 */
+  pre.mermaid:not([data-processed]) { color: var(--text-muted); font-family: var(--font-mono); font-size: 12px; }
+
+  /* —— 表格 —— */
+  /* 每个 <div class="table-wrap"><table> 都用 <div class="table-wrap"> 包裹：宽表在窄正文栏内横向滚动，
+     而长的类名/文件路径/模块名在单元格内自动换行，绝不把表格撑宽、拖垮整页排版。 */
+  .content .table-wrap {
+    margin: 18px 0;
+    overflow-x: auto;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-soft);
+    -webkit-overflow-scrolling: touch;
+  }
+  .content table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+    background: var(--surface);
+    table-layout: auto;
+  }
+  .content thead th {
+    background: var(--primary);
+    color: #FFF7EF;
+    font-weight: 600;
+    text-align: left;
+    padding: 11px 14px;
+    letter-spacing: .3px;
+    white-space: nowrap;          /* 表头短标签不换行 */
+  }
+  .content tbody td { padding: 10px 14px; border-top: 1px solid var(--border-soft); vertical-align: top; }
+  /* 关键修复：长 token（类名/路径/模块名）在单元格内换行，而不是撑宽列宽 */
+  .content tbody th, .content tbody td { overflow-wrap: anywhere; word-break: break-word; }
+  .content tbody tr:nth-child(even) { background: var(--surface-warm); }
+  .content tbody tr:hover { background: var(--primary-soft); }
+  .content .table-wrap::-webkit-scrollbar { height: 9px; }
+  .content .table-wrap::-webkit-scrollbar-thumb { background: #E0CBB2; border-radius: 8px; }
+
+  /* —— 多级列表 —— */
+  .content ul, .content ol { margin: 12px 0; padding-left: 26px; }
+  .content li { margin: 5px 0; }
+  .content ul { list-style: none; }
+  .content ul > li { position: relative; }
+  .content ul > li::before {
+    content: "";
+    position: absolute;
+    left: -16px; top: .68em;
+    width: 6px; height: 6px;
+    background: var(--primary);
+    border-radius: 50%;
+  }
+  .content ul ul > li::before { background: var(--accent); border-radius: 1px; }
+  .content ul ul ul > li::before { background: var(--text-muted); width:5px; height:5px; }
+  .content ol { list-style: decimal; }
+  .content ol > li::marker { color: var(--primary); font-weight: 700; }
+  .content li > ul, .content li > ol { margin: 4px 0; }
+
+  /* —— 图片 / 图注 —— */
+  .content figure { margin: 22px 0; text-align: center; }
+  .content img, .content figure svg {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .content figcaption {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* —— 引用块 —— */
+  .content blockquote {
+    margin: 16px 0;
+    padding: 12px 18px;
+    background: var(--quote-bg);
+    border-left: 4px solid var(--quote-bar);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--text-soft);
+  }
+  .content blockquote p { margin: 6px 0; }
+
+  /* —— 图表容器（Mermaid / 手绘 SVG） —— */
+  .diagram {
+    background: var(--surface-warm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin: 18px 0;
+    text-align: center;
+    box-shadow: var(--shadow);
+    overflow-x: auto;            /* 宽图可横向滚动，避免溢出卡片 */
+  }
+  .diagram .mermaid { display: block; }
+  .diagram .mermaid svg { max-width: 100%; height: auto; }
+  /* 图后关键点解读的统一样式 */
+  .diagram-note { font-size: 13.5px; color: var(--text-soft); margin: 8px 2px 0; }
+
+  /* —— 元信息卡 & 标签 —— */
+  .meta-card {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px 22px;
+    background: var(--surface-warm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    margin: 16px 0 8px;
+    box-shadow: var(--shadow);
+  }
+  .meta-card .k { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; }
+  .meta-card .v { font-size: 14.5px; color: var(--text); font-weight: 600; word-break: break-all; }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 20px;
+    background: var(--primary-soft);
+    color: var(--primary-deep);
+    margin: 0 4px 4px 0;
+  }
+  .badge.accent { background: #F6E4C4; color: #8A5A12; }
+  /* 诚实标注：无法从代码提取（去饱和 + 虚线，示意"缺口"而非强调） */
+  .badge.unknown { background: #EFE7DE; color: #8A7D74; border: 1px dashed #C3B4A3; font-weight: 500; }
+  .callout-unknown {
+    margin: 14px 0;
+    padding: 12px 16px 12px 44px;
+    position: relative;
+    background: #F4EEE6;
+    border: 1px dashed #C3B4A3;
+    border-radius: var(--radius);
+    color: var(--text-soft);
+  }
+  .callout-unknown::before {
+    content: "缺口";
+    position: absolute;
+    left: 12px; top: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: #9B8A79;
+    border: 1px solid #C3B4A3;
+    border-radius: 5px;
+    padding: 1px 5px;
+    background: #FBF6EF;
+  }
+
+  /* 视图小标注 */
+  .view-tag { font-size:12px; font-weight:600; color:var(--accent); letter-spacing:.5px; }
+
+  .src-ref { font-family: var(--font-mono); font-size: .85em; color: var(--primary-deep); word-break: break-all; }
+
+  @media (max-width: 860px) {
+    .sidebar { display: none; }
+    .content { padding: 30px 20px 80px; }
+  }
+  @media print {
+    .sidebar { display: none; }
+    .content { max-width: none; }
+    .content pre, .diagram, .content table { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <!-- ===================== 左侧导航（自动生成） ===================== -->
+  <aside class="sidebar">
+    <div class="brand">{{project_name}}<small>架构设计文档</small></div>
+    <div class="toc-title">目录</div>
+    <nav id="toc" class="toc"><!-- JS 自动填充 --></nav>
+  </aside>
+
+  <!-- ===================== 主体内容 ===================== -->
+  <main id="content" class="content">
+
+    <h1>{{project_name}} 架构设计文档
+      <span class="doc-sub">{{one_line_positioning}}</span>
+    </h1>
+
+    <!-- 元信息 -->
+    <div class="meta-card">
+      <div><div class="k">根路径</div><div class="v">{{root}}</div></div>
+      <div><div class="k">分析模式</div><div class="v">{{mode}}</div></div>
+      <div><div class="k">主要语言</div><div class="v">{{languages}}</div></div>
+      <div><div class="k">生成时间</div><div class="v">{{timestamp}}</div></div>
+      <div><div class="k">代码规模</div><div class="v">{{loc}} LOC / {{module_count}} 模块</div></div>
+      <div><div class="k">分析深度</div><div class="v">{{depth}}</div></div>
+    </div>
+
+    <!-- ===================== 1 引言 ===================== -->
+    <h2>1. 引言</h2>
+    <h3>1.1 文档目的与读者</h3>
+    <p>本文面向<strong>{{audience}}</strong>，用于说明 {{project_name}} 的整体架构设计，而非逐文件的实现说明。</p>
+    <h3>1.2 系统定位</h3>
+    <p>{{system_positioning}}</p>
+    <h3>1.3 范围与非目标</h3>
+    <ul>
+      <li>覆盖：……</li>
+      <li>不覆盖（未分析部分）：……</li>
+    </ul>
+
+    <!-- ===================== 2 架构级抽象（核心） ===================== -->
+    <h2>2. 架构级抽象</h2>
+    <p class="view-tag">从代码提炼的黑盒视角 —— 系统边界、输入/输出、核心处理与领域概念。</p>
+
+    <h3>2.1 系统上下文（黑盒 I/O）</h3>
+    <p>系统与外部参与者（谁在用它、它连接谁）及其输入/输出约定。顶层上下文图建议用手绘内联 SVG 或 Mermaid。</p>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+    user([用户/上游系统]):::ext -->|输入契约| SYS[[{{project_name}}]]
+    SYS -->|输出产物| sink([下游/文件/接口]):::ext
+    conf[(配置)]:::store -.-> SYS
+    classDef ext fill:#FBEFE0,stroke:#C0603A,color:#4A3F35;
+    classDef store fill:#F3E2CE,stroke:#CC8A2E,color:#4A3F35;
+      </pre>
+    </div>
+    <h4>2.1.1 系统输入</h4>
+    <div class="table-wrap"><table>
+      <thead><tr><th>输入</th><th>来源</th><th>形态/契约</th><th>代码位置</th></tr></thead>
+      <tbody>
+        <tr><td>{{input_name}}</td><td>{{source}}</td><td>{{shape}}</td><td class="src-ref">{{file}}:{{line}}</td></tr>
+      </tbody>
+    </table></div>
+    <h4>2.1.2 系统输出</h4>
+    <div class="table-wrap"><table>
+      <thead><tr><th>输出</th><th>去向</th><th>形态/契约</th><th>代码位置</th></tr></thead>
+      <tbody>
+        <tr><td>{{output_name}}</td><td>{{sink}}</td><td>{{shape}}</td><td class="src-ref">{{file}}:{{line}}</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>2.2 核心领域概念 / 数据抽象</h3>
+    <p>从核心数据结构、类型、schema 提炼（非罗列所有类）。可用 UML 类图或 ER 图表达。</p>
+    <div class="diagram">
+      <pre class="mermaid">
+classDiagram
+    class 核心实体 {
+      +关键字段
+      +关键方法()
+    }
+    核心实体 "1" --> "*" 关联实体
+      </pre>
+    </div>
+
+    <h3>2.3 关键处理阶段</h3>
+    <p>从主控制流提炼的处理管道（transform stages），说明"输入如何一步步变为输出"。</p>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+    A[阶段1 采集] --> B[阶段2 变换] --> C[阶段3 合成] --> D[阶段4 产出]
+      </pre>
+    </div>
+
+    <h3>2.4 设计目标与质量属性</h3>
+    <ul>
+      <li><strong>功能目标</strong>：……</li>
+      <li><strong>质量属性</strong>：性能 / 可扩展性 / 并发 / 可靠性（从代码推断，附证据）。</li>
+      <li><strong>约束</strong>：平台、二进制兼容(ABI)、依赖版本、兼容性。</li>
+      <li><strong>业务设计意图</strong>：<span class="badge unknown">无法从代码中提取</span></li>
+    </ul>
+    <!-- 凡是代码里判定不了、又未获用户上下文的设计点，用上面的 badge 或下面的 callout 诚实标注，切勿臆测 -->
+    <div class="callout-unknown">
+      <strong>示例缺口：</strong>本系统的性能目标（吞吐/延迟指标）在代码中无相关基准或注释。原因：仅有实现、无量化目标。建议：向需求方确认 SLA，或查阅外部性能设计文档。
+    </div>
+
+    <!-- ===================== 3 场景视图（+1） ===================== -->
+    <h2>3. 场景视图（+1 用例）</h2>
+    <p class="view-tag">4+1 · 用例/场景 —— 驱动并验证架构的关键用例。</p>
+    <p>选取 3~5 个关键场景。每个场景给出：触发者、目标、主路径、涉及模块。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>场景</th><th>触发者</th><th>目标</th><th>涉及模块</th></tr></thead>
+      <tbody><tr><td>{{scenario}}</td><td>{{actor}}</td><td>{{goal}}</td><td>{{modules}}</td></tr></tbody>
+    </table></div>
+
+    <!-- ===================== 4 逻辑视图 ===================== -->
+    <h2>4. 逻辑视图</h2>
+    <p class="view-tag">4+1 · 逻辑 —— 面向功能的结构：领域模型、关键类与状态。图：类图 / 状态图。</p>
+    <h3>4.1 领域模型（类图）</h3>
+    <div class="diagram"><pre class="mermaid">
+classDiagram
+    class A
+    class B
+    A --> B
+    </pre></div>
+    <h3>4.2 关键状态机（状态图）</h3>
+    <div class="diagram"><pre class="mermaid">
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Running: start
+    Running --> [*]: done
+    </pre></div>
+
+    <!-- ===================== 5 进程视图 ===================== -->
+    <h2>5. 进程视图</h2>
+    <p class="view-tag">4+1 · 进程 —— 运行时行为、并发与通信。图：时序图 / 活动图 / 泳道图。</p>
+    <h3>5.1 关键运行路径（时序图）</h3>
+    <div class="diagram"><pre class="mermaid">
+sequenceDiagram
+    participant Caller
+    participant Core
+    participant Store
+    Caller->>Core: 请求
+    Core->>Store: 读/写
+    Store-->>Core: 结果
+    Core-->>Caller: 响应
+    </pre></div>
+    <h3>5.2 跨角色流程（泳道图）</h3>
+    <p>用 <code>flowchart</code> 的 <code>subgraph</code> 模拟泳道，表达职责边界与流程流转。</p>
+    <div class="diagram"><pre class="mermaid">
+flowchart TB
+    subgraph 泳道A[组件 A]
+      a1[步骤1] --> a2[步骤2]
+    end
+    subgraph 泳道B[组件 B]
+      b1[步骤3]
+    end
+    a2 --> b1
+    </pre></div>
+    <h3>5.3 并发与通信</h3>
+    <p>线程/进程/协程模型、共享状态、加锁纪律、消息通道。</p>
+
+    <!-- ===================== 6 开发视图 ===================== -->
+    <h2>6. 开发视图</h2>
+    <p class="view-tag">4+1 · 开发 —— 程序员视角的代码组织。图：包图 / 组件图。</p>
+    <h3>6.1 模块 / 包组织（组件图）</h3>
+    <div class="diagram"><pre class="mermaid">
+flowchart TB
+    subgraph 应用层
+      api[接口层]
+    end
+    subgraph 核心层
+      core[核心逻辑]
+    end
+    subgraph 基础层
+      util[通用工具]
+    end
+    api --> core --> util
+    </pre></div>
+    <h3>6.2 模块清单</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>模块</th><th>路径</th><th>职责</th><th>语言</th></tr></thead>
+      <tbody><tr><td>{{module}}</td><td class="src-ref">{{path}}</td><td>{{responsibility}}</td><td>{{lang}}</td></tr></tbody>
+    </table></div>
+    <h3>6.3 依赖关系</h3>
+    <p>模块间依赖方向、分层是否被破坏、循环依赖。</p>
+
+    <!-- ===================== 7 物理视图 ===================== -->
+    <h2>7. 物理视图</h2>
+    <p class="view-tag">4+1 · 物理 —— 部署拓扑与产物。图：部署图。（库/CLI 项目可精简或说明"不适用"）</p>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+    subgraph 运行环境
+      proc[进程/可执行]
+      lib[(动态库)]
+    end
+    proc --> lib
+    </pre></div>
+
+    <!-- ===================== 8 数据流视图（DFD） ===================== -->
+    <h2>8. 数据流视图（DFD）</h2>
+    <p class="view-tag">画法 —— 过程(圆角)/数据存储(柱)/外部实体(方)/数据流(箭头)。分层：上下文图 → 0 层 → 1 层。</p>
+    <h3>8.1 上下文图（Level 0 上下文）</h3>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+    ext1[外部实体]:::ext -->|数据流| P0(("0 系统")):::proc
+    P0 -->|数据流| ext2[外部实体]:::ext
+    classDef ext fill:#FBEFE0,stroke:#C0603A;
+    classDef proc fill:#F3E2CE,stroke:#CC8A2E;
+    </pre></div>
+    <h3>8.2 0 层 DFD</h3>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+    ext[外部实体]:::ext -->|输入| P1((1 加工)):::proc
+    P1 -->|中间数据| DS[( D1 数据存储 )]:::store
+    DS --> P2((2 加工)):::proc
+    P2 -->|输出| ext
+    classDef ext fill:#FBEFE0,stroke:#C0603A;
+    classDef proc fill:#F3E2CE,stroke:#CC8A2E;
+    classDef store fill:#FFF9F1,stroke:#9B8A79;
+    </pre></div>
+
+    <!-- ===================== 9 子模块详细设计（复杂时展开） ===================== -->
+    <h2>9. 子模块详细设计</h2>
+    <p>当某模块复杂度过高时在此展开其内部设计（每个子模块一节，见 <code>submodule-section.html.tmpl</code>）。简单项目可省略本章。</p>
+    <!-- 复制 submodule-section.html.tmpl 的 <section> 到此处，每个子模块一节 -->
+
+    <!-- ===================== 10 通用机制 ===================== -->
+    <h2>10. 通用机制（错误处理、配置、日志、资源、安全）</h2>
+    <ul>
+      <li><strong>错误处理</strong>：异常/错误码策略、边界。</li>
+      <li><strong>配置管理</strong>：来源、优先级。</li>
+      <li><strong>日志与监控</strong>：……</li>
+      <li><strong>资源与生命周期</strong>：内存/句柄/连接（C++ 所有权、Python 上下文管理）。</li>
+      <li><strong>安全</strong>：输入校验、鉴权、隔离。</li>
+    </ul>
+
+    <!-- ===================== 11 关键设计决策 ===================== -->
+    <h2>11. 关键设计决策与权衡</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>决策</th><th>背景/动机</th><th>取舍</th><th>证据</th></tr></thead>
+      <tbody><tr><td>{{decision}}</td><td>{{context}}</td><td>{{tradeoff}}</td><td class="src-ref">{{file}}:{{line}}</td></tr></tbody>
+    </table></div>
+
+    <!-- ===================== 12 附录 ===================== -->
+    <h2>12. 附录</h2>
+    <h3>12.1 术语表</h3>
+    <div class="table-wrap"><table><thead><tr><th>术语</th><th>含义</th></tr></thead><tbody><tr><td>{{term}}</td><td>{{def}}</td></tr></tbody></table></div>
+    <h3>12.2 注意事项 / 未分析部分</h3>
+    <blockquote><p>列出分析假设、未解析的依赖、入口模式下裁剪掉的范围，明确文档边界。</p></blockquote>
+    <h3>12.3 无法从代码提取的设计点</h3>
+    <p>汇总全文中标注为 <span class="badge unknown">无法从代码中提取</span> 的设计共识/要点，便于后续向相关方补齐。区别于"未分析部分"：此处是<em>代码里根本判定不了</em>的内容。</p>
+    <div class="callout-unknown"><strong>缺口清单：</strong>逐条列出——缺什么 / 为何判定不了 / 建议确认途径。</div>
+    <h3>12.4 参考</h3>
+    <p>所有 <span class="src-ref">path:line</span> 引用均指向真实代码；每条论断可回溯。</p>
+
+  </main>
+</div>
+
+<!-- ===================== Mermaid（暖色主题） ===================== -->
+<!-- 离线：下载同版本 mermaid.min.js 到 assets/ 并改为 src="assets/mermaid.min.js" -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) {
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      themeVariables: {
+        fontFamily: getComputedStyle(document.body).getPropertyValue('--font-sans'),
+        primaryColor: "#F3E2CE",
+        primaryBorderColor: "#C0603A",
+        primaryTextColor: "#4A3F35",
+        lineColor: "#B8825A",
+        secondaryColor: "#FBEFE0",
+        tertiaryColor: "#FFF9F1",
+        noteBkgColor: "#FBEEDD",
+        noteBorderColor: "#D9A441"
+      }
+    });
+  }
+</script>
+
+<!-- ===================== 自动目录 + 滚动高亮 + 平滑跳转 ===================== -->
+<script>
+(function () {
+  var content = document.getElementById("content");
+  var toc = document.getElementById("toc");
+  if (!content || !toc) return;
+  var heads = content.querySelectorAll("h1, h2, h3, h4");
+  var n = 0, items = [], byId = {};
+  heads.forEach(function (h) {
+    var id = h.id || ("sec-" + (++n));
+    h.id = id;
+    var level = parseInt(h.tagName.substring(1), 10);
+    var a = document.createElement("a");
+    a.href = "#" + id;
+    a.className = "toc-link toc-l" + level;
+    // 只取标题文本首行（忽略 .doc-sub 等子元素多余文本）
+    a.textContent = (h.childNodes[0] && h.childNodes[0].nodeType === 3)
+      ? h.childNodes[0].textContent.trim() : h.textContent.trim();
+    a.title = a.textContent;
+    toc.appendChild(a);
+    items.push({ id: id, el: h });
+    byId[id] = a;
+  });
+  toc.addEventListener("click", function (e) {
+    var a = e.target.closest("a.toc-link");
+    if (!a) return;
+    e.preventDefault();
+    var id = a.getAttribute("href").slice(1);
+    var el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      history.replaceState(null, "", "#" + id);
+    }
+  });
+  if ("IntersectionObserver" in window) {
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          var cur = toc.querySelector(".toc-link.active");
+          if (cur) cur.classList.remove("active");
+          var link = byId[en.target.id];
+          if (link) {
+            link.classList.add("active");
+            // 保证激活项在侧栏可见
+            var r = link.getBoundingClientRect(), sr = toc.parentElement.getBoundingClientRect();
+            if (r.top < sr.top || r.bottom > sr.bottom) link.scrollIntoView({ block: "nearest" });
+          }
+        }
+      });
+    }, { rootMargin: "0px 0px -78% 0px", threshold: 0 });
+    items.forEach(function (it) { obs.observe(it.el); });
+  }
+})();
+</script>
+</body>
+</html>
