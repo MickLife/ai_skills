@@ -47,10 +47,10 @@ languages: python, c, cpp
 
 ## 四阶段方法论
 
-完整流程、token 预算、分层分解、动态委派、失败降级见 `references/methodology.md`。概览：
+完整流程、token 预算、分层分解、动态拆分派发、失败降级见 `references/methodology.md`。概览：
 
 1. **侦察**——`scripts/scan_tree.py`：文件树 + token 估算、构建系统、仓库边界。
-2. **分解**——`scripts/deps_scan.py`：依赖图驱动分层聚类；超预算模块标 `needs_split`。入口模式改为可达闭包剪枝。
+2. **分解**——`scripts/deps_scan.py`：依赖图驱动分层聚类；超预算模块标 `needs_split`。入口模式改为只保留与入口相关的文件。
 3. **深挖**——读真实代码，逐模块提炼设计事实（有子代理则并行）。
 4. **合成**——**先提炼架构级抽象，再按需选视图**，产出单一 HTML（模板 `templates/architecture.html.tmpl`）。
 
@@ -59,7 +59,7 @@ languages: python, c, cpp
 文档是整架构设计，不是逐文件罗列。**视图章节是候选菜单，不是必填清单**：有对应设计内容才纳入，否则删章（空视图硬填＝变相臆测），最终**动态连续编号**。
 
 - **必写骨架**：引言 + 架构级抽象（系统 I/O、核心领域概念、关键处理阶段、质量属性）+ 附录（含"无法提取的设计点"）。
-- **按需**：场景 / 逻辑 / 进程 / 开发 / 物理 / DFD / 横切 / 决策 / 子模块 / 跨仓视图。
+- **按需**：场景 / 逻辑 / 进程 / 开发 / 物理 / DFD / 通用机制 / 决策 / 子模块 / 跨仓视图。
 
 完整菜单、裁剪原则、字段规范、JSON sidecar 见 `references/output-format.md`；抽象提炼与视图选型见 `references/architecture-views.md`。
 
@@ -69,7 +69,7 @@ languages: python, c, cpp
 ./docs/
 ├── ARCHITECTURE.html        # 唯一交付物：单文件自包含设计文档
 ├── module_tree.json         # 分层分解结果（数据）
-├── entry-trace.json         # 仅入口模式：可达闭包（数据）
+├── entry-trace.json         # 仅入口模式：与入口相关的文件集合（数据）
 ├── metadata.json            # 运行元数据（数据）
 └── assets/                  # 可选：仅当本地内联 mermaid.min.js 做离线渲染时
 ```
@@ -103,14 +103,14 @@ python scripts/deps_scan.py --root /path --format json
 
 ## 入口模式
 
-用户指定入口时**不做全量扫描**：`find_entry.py` 解析入口 → 依赖图上求可达闭包（前向被调用 + 反向调用者）→ 采用精简章节集（局部 I/O + 以主路径为中心的进程视图 + 附"未分析部分"）。算法见 `references/methodology.md#入口模式`。
+用户指定入口时**不做全量扫描**：`find_entry.py` 解析入口 → 顺依赖关系找出与入口相关的文件（它调用的 + 调用它的）→ 采用精简章节集（局部 I/O + 以主路径为中心的进程视图 + 附"未分析部分"）。算法见 `references/methodology.md#入口模式`。
 
 ## 参考文档（按需加载）
 
-- `references/methodology.md`——四阶段全流程、token 预算、分层分解、动态委派、入口闭包、失败降级、质量门。
+- `references/methodology.md`——四阶段全流程、token 预算、分层分解、动态拆分派发、入口关联范围、失败降级、质量门。
 - `references/architecture-views.md`——**架构级抽象提炼**（含诚实标注政策）+ 4+1/UML/DFD/泳道图选型 + Mermaid 自检。
 - `references/output-format.md`——HTML 章节菜单与裁剪原则、字段规范、无法提取标记、JSON sidecar 结构。
-- `references/python-analysis.md`——Python 静态分析要点（包/import/类型/异步/FFI）。
+- `references/python-analysis.md`——Python 静态分析要点（包/import/类型/异步/跨语言调用）。
 - `references/cpp-analysis.md`——C/C++ 静态分析要点（TU/include 图/构建 target/链接 ABI/模板/RAII）。
 - `references/multi-repo.md`——仓库清点、优先扫描顺序、跨仓边映射。
 - `templates/architecture.html.tmpl`——主文档模板（暖色主题 + 左侧目录 + 全元素样式 + 章节骨架）。
@@ -119,7 +119,7 @@ python scripts/deps_scan.py --root /path --format json
 ## 执行清单
 
 - [ ] 收集根路径、入口（若有）、范围过滤、深度；`scan_tree.py` 后按规模护栏判断是否需先确认范围。
-- [ ] （多仓）清点仓库；（入口）解析根并计算可达闭包。
+- [ ] （多仓）清点仓库；（入口）解析根并找出与入口相关的文件。
 - [ ] `deps_scan.py` 构建依赖图，标记 `needs_split`。
 - [ ] 深挖各模块提炼设计事实（有子代理则并行）。
 - [ ] 提炼架构级抽象；按需选视图；复杂模块展开子模块章。

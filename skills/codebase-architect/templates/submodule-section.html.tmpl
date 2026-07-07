@@ -22,13 +22,13 @@
 <p>{{responsibility}}</p>
 
 <h4>输入 / 输出（子模块 I/O 契约）</h4>
-<table>
+<div class="table-wrap"><table>
   <thead><tr><th>方向</th><th>名称</th><th>来源/去向</th><th>形态</th><th>代码位置</th></tr></thead>
   <tbody>
     <tr><td>输入</td><td>{{in_name}}</td><td>{{in_from}}</td><td>{{in_shape}}</td><td class="src-ref">{{file}}:{{line}}</td></tr>
     <tr><td>输出</td><td>{{out_name}}</td><td>{{out_to}}</td><td>{{out_shape}}</td><td class="src-ref">{{file}}:{{line}}</td></tr>
   </tbody>
-</table>
+</table></div>
 
 <h4>内部结构（组件 / 类图）</h4>
 <div class="diagram"><pre class="mermaid">
@@ -51,12 +51,12 @@ sequenceDiagram
 </pre></div>
 
 <h4>关键函数 / 类型</h4>
-<table>
+<div class="table-wrap"><table>
   <thead><tr><th>符号</th><th>位置</th><th>用途</th><th>参数/返回</th><th>可见性</th></tr></thead>
   <tbody>
     <tr><td><code>{{symbol}}</code></td><td class="src-ref">{{file}}:{{lines}}</td><td>{{purpose}}</td><td>{{params}}</td><td>{{visibility}}</td></tr>
   </tbody>
-</table>
+</table></div>
 
 <h4>依赖关系</h4>
 <ul>

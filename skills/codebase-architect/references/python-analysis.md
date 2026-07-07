@@ -52,7 +52,7 @@
 - 切分支后的 `__pycache__`/`.pyc` 陈旧——非设计问题，除非相关否则不记。
 - Poetry / pip-tools / uv 锁文件分叉。
 
-## FFI 边界（Python ↔ C/C++）
+## 跨语言调用边界（Python ↔ C/C++）
 
 当 Python 项目嵌入或绑定 C/C++：
 
