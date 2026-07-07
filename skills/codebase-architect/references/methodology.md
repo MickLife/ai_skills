@@ -77,33 +77,17 @@
 
 ## 阶段四：合成与交付（架构级抽象 + 视图化）
 
-目标：把阶段三的模块事实**提炼成整架构级设计**，产出单一自包含 HTML 文档。这是本 skill 的灵魂——不做浮于代码表面的罗列，而是先抽象、再选视图、最后画图。
+目标：把阶段三的模块事实**提炼成整架构级设计**，产出单一自包含 HTML 文档。灵魂是先抽象、再选视图、最后画图——不做浮于代码表面的罗列。
 
-1. **先提炼架构级抽象**（详见 `architecture-views.md#一`）：
-   - 系统边界与外部交互者；系统级黑盒输入/输出契约。
-   - 核心领域概念/数据抽象（少数核心实体，非全部类）。
-   - 关键处理阶段/管道（从主控制流提炼）。
-   - 质量属性与约束、关键设计决策与权衡（均附代码证据）。
-2. **按 4+1 视图组织章节，为每种意图选合理视图**（选型见 `architecture-views.md#二~六`）：
-   - 逻辑视图：`classDiagram` 领域模型、`stateDiagram-v2` 状态机。
-   - 进程视图：`sequenceDiagram` 关键运行路径、泳道图（`flowchart`+`subgraph`）跨角色流程。
-   - 开发视图：`flowchart`+`subgraph` 组件/包图 + 模块清单。
-   - 物理视图（有部署才写）：`flowchart` 部署拓扑。
-   - 场景（+1）：关键用例/场景表。
-   - DFD（数据加工型才写）：上下文图 → 0 层 →（必要时）1 层。
-3. **复杂模块拆解**：阶段二/三中被标 `needs_split` 或超预算的模块，在"子模块详细设计"章逐个展开（`submodule-section.html.tmpl`），复用同一套视图方法。
-4. **写入前校验每个 Mermaid 块**（`architecture-views.md#七`）：含特殊字符标签加引号、勿用 `end` 作节点 id、`classDiagram` 泛型用 `~T~`、一个 `<pre class="mermaid">` 一张图。
-5. **产出单一 HTML**（用 `templates/architecture.html.tmpl`）：
-   - 内联 CSS + 内联 JS（左侧自动目录、平滑跳转、滚动高亮）。
-   - 浅色暖色调；h1–h4/图片/表格/多级列表/代码块/加粗/斜体/内联代码样式齐备。
-   - Mermaid 默认 CDN、可 vendored 到 `assets/` 离线；顶层上下文图可选手绘内联 SVG。
-   - 每条论断附 `path:line`（`<span class="src-ref">`）。
-6. 写 `metadata.json`：`{root, repos[], entry_points[], mode, depth, output_format:"html", views_included[], submodules_expanded[], timestamp, host_agent, token_budget, module_count}`。
+1. **先提炼架构级抽象**（方法见 `architecture-views.md#一`）：系统边界与黑盒 I/O 契约、核心领域概念、关键处理阶段、质量属性与约束、关键设计决策，均附代码证据。
+2. **按需选视图组织章节**：为每种设计意图选合理视图，视图/图/Mermaid 选型见 `architecture-views.md#二~七`；章节菜单与裁剪原则见 `output-format.md`。没内容的视图删章，不硬凑。
+3. **复杂模块拆解**：阶段二/三中被标 `needs_split` 的模块，在"子模块详细设计"章逐个展开（`submodule-section.html.tmpl`），复用同一套视图方法。
+4. **产出单一 HTML**：用 `templates/architecture.html.tmpl`；HTML 硬性要求（自包含、暖色、自动目录、样式齐备、Mermaid 自检、`path:line` 引用）与 `metadata.json` 结构均见 `output-format.md`。
 
 ## 质量门
 
 宣布完成前：
-- 第 3 章"架构级抽象"齐备：系统 I/O 契约、核心概念、处理阶段、质量属性，均有代码证据。
+- 架构级抽象章齐备：系统 I/O 契约、核心概念、处理阶段、质量属性，均有代码证据。
 - 关键函数表每行都有 agent 实际读过的 `file:lines` 引用。
 - 每条坑点都有代码引用或代码注释佐证。
 - 每个视图都对应真实设计意图（无为凑格式硬画的图）；所有 Mermaid 块通过语法自检。
