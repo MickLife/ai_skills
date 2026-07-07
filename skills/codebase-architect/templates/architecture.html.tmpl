@@ -3,6 +3,9 @@
   codebase-architect — 架构设计文档模板（单文件自包含 · 浅色暖色调）
   用法：
     1. 复制本文件为 docs/ARCHITECTURE.html，替换 {{占位符}} 与各 <section> 内容。
+       重要：下面的视图章节是"候选菜单"，不是必填清单。没有对应设计内容的视图章节请
+       直接删除（连同其 <h2>/<h3>），并把保留章节重新连续编号；绝不要留占位符或用套话
+       硬填空视图——硬填空视图＝变相臆测。每张图都要配文字：图前讲设计意图、图后给关键点解读。
     2. 全部样式与脚本已内联；左侧导航由 JS 从 h1~h4 自动生成，无需手动维护目录。
     3. 图表使用 Mermaid（<pre class="mermaid">…</pre>）：
        - 默认通过 CDN 加载 mermaid.js（查看时需联网）。
@@ -294,8 +297,12 @@
     margin: 18px 0;
     text-align: center;
     box-shadow: var(--shadow);
+    overflow-x: auto;            /* 宽图可横向滚动，避免溢出卡片 */
   }
   .diagram .mermaid { display: block; }
+  .diagram .mermaid svg { max-width: 100%; height: auto; }
+  /* 图后关键点解读的统一样式 */
+  .diagram-note { font-size: 13.5px; color: var(--text-soft); margin: 8px 2px 0; }
 
   /* —— 元信息卡 & 标签 —— */
   .meta-card {

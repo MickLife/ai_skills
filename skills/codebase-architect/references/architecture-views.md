@@ -220,6 +220,8 @@ flowchart TB
 - `sequenceDiagram` 的 participant 别名：`participant X as 显示名`。
 - 一个 `<pre class="mermaid">` 只放一张图。
 - 配色统一用本文 `classDef`（赤陶/琥珀/暖白），与页面主题一致。
+- **单图复杂度上限**：流程/DFD/组件图顶层节点经验上 ≤ 9 个；超了就分层（拆上下文图/0 层/1 层）或按簇拆 `subgraph`，否则会糊成一团、失去表达力。
+- **图必配文字**：每张图前用文字讲清"这张图要表达什么设计意图"，图后用 `<p class="diagram-note">` 给关键点解读。孤立堆图＝没提炼。
 
 ---
 
