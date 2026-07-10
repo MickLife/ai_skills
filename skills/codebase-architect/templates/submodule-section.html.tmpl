@@ -1,0 +1,72 @@
+<!--
+  子模块章节 partial —— 供"9. 子模块详细设计"章节使用。
+  当某个模块复杂度过高（超 token 预算 / 内部再分层）时，为其单独展开一节。
+  用法：把下面整段 BEGIN submodule … END submodule 复制进主文档
+        "子模块详细设计"大节标题之后，每个子模块复制一份，替换 {{占位符}}。
+  样式类沿用 architecture.html.tmpl，无需额外 CSS。
+  视图按需选用：内部复杂选组件图/时序图/状态图；数据加工重则加子层 DFD；跨角色流程用泳道图。
+  只放"该子模块真正需要"的视图，不要为凑格式而堆图。
+-->
+
+<!-- BEGIN submodule -->
+<h3>9.x 子模块：{{submodule_name}}</h3>
+
+<div class="meta-card">
+  <div><div class="k">路径</div><div class="v">{{path}}</div></div>
+  <div><div class="k">语言</div><div class="v">{{lang}}</div></div>
+  <div><div class="k">规模</div><div class="v">{{loc}} LOC</div></div>
+  <div><div class="k">拆解原因</div><div class="v">{{split_reason}}</div></div>
+</div>
+
+<h4>职责</h4>
+<p>{{responsibility}}</p>
+
+<h4>输入 / 输出（子模块 I/O 契约）</h4>
+<div class="table-wrap"><table>
+  <thead><tr><th>方向</th><th>名称</th><th>来源/去向</th><th>形态</th><th>代码位置</th></tr></thead>
+  <tbody>
+    <tr><td>输入</td><td>{{in_name}}</td><td>{{in_from}}</td><td>{{in_shape}}</td><td class="src-ref">{{file}}:{{line}}</td></tr>
+    <tr><td>输出</td><td>{{out_name}}</td><td>{{out_to}}</td><td>{{out_shape}}</td><td class="src-ref">{{file}}:{{line}}</td></tr>
+  </tbody>
+</table></div>
+
+<h4>内部结构（组件 / 类图）</h4>
+<div class="diagram"><pre class="mermaid">
+flowchart TB
+    in[/输入/] --> proc[核心处理]
+    proc --> out[/输出/]
+    proc --> helper[辅助组件]
+</pre></div>
+
+<h4>关键运行路径（时序图）</h4>
+<div class="diagram"><pre class="mermaid">
+sequenceDiagram
+    participant Caller
+    participant This as {{submodule_name}}
+    participant Dep as 依赖
+    Caller->>This: 调用
+    This->>Dep: 协作
+    Dep-->>This: 返回
+    This-->>Caller: 结果
+</pre></div>
+
+<h4>关键函数 / 类型</h4>
+<div class="table-wrap"><table>
+  <thead><tr><th>符号</th><th>位置</th><th>用途</th><th>参数/返回</th><th>可见性</th></tr></thead>
+  <tbody>
+    <tr><td><code>{{symbol}}</code></td><td class="src-ref">{{file}}:{{lines}}</td><td>{{purpose}}</td><td>{{params}}</td><td>{{visibility}}</td></tr>
+  </tbody>
+</table></div>
+
+<h4>依赖关系</h4>
+<ul>
+  <li><strong>依赖（出）</strong>：{{deps_out}} —— <span class="src-ref">{{file}}:{{line}}</span></li>
+  <li><strong>被依赖（入）</strong>：{{deps_in}} —— <span class="src-ref">{{file}}:{{line}}</span></li>
+</ul>
+
+<h4>设计要点与坑点</h4>
+<ul>
+  <li>设计取舍：{{tradeoff}}</li>
+  <li>坑点：{{gotcha}} —— <span class="src-ref">{{file}}:{{line}}</span></li>
+</ul>
+<!-- END submodule -->

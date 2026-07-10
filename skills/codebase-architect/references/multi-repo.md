@@ -23,7 +23,7 @@
 | `CMakeLists.txt` 含 `add_library(... SHARED)` 且有公共头目录 | 共享库 / 核心库 |
 | 仅含 `.h`/`.hpp` + `CMake` `INTERFACE` 库 | 共享头 / 契约仓 |
 | `add_executable` 为主 | 可执行服务 / 工具 |
-| `setup.py` + `pybind11` | Python 绑定仓（FFI 边界） |
+| `setup.py` + `pybind11` | Python 绑定仓（跨语言调用边界） |
 | `WORKSPACE`/`MODULE.bazel` 引用其他仓 | Bazel 聚合仓 |
 | 含 `proto`/`idl`/`schema` | 契约 / schema 仓 |
 
@@ -48,19 +48,21 @@
 - **跨仓 C/C++ include**：仓 A 中 `#include <shared/types.h>`，头来自仓 B 的公共 include 目录。源行 = include 行；解析依据 = CMake `target_include_directories` / Bazel `hdrs` + `includes`。
 - **CMake 跨仓构建边**：`add_subdirectory(../other_repo ...)`、`FetchContent_Declare(...)`、`find_package(<other>)`。源 = `CMakeLists.txt` 行。
 - **Bazel 跨仓构建边**：`@other_repo//pkg:target`、`MODULE.bazel` `bazel_dep`。源 = `BUILD`/`MODULE.bazel` 行。
-- **Python ↔ C/C++ FFI 跨仓**：仓 A（Python）通过 pybind11/cffi/ctypes 调用仓 B（C++ 库）。标注绑定技术、GIL 释放点、所有权边界。
+- **Python ↔ C/C++ 跨语言调用（跨仓）**：仓 A（Python）通过 pybind11/cffi/ctypes 调用仓 B（C++ 库）。标注绑定技术、GIL 释放点、所有权边界。
 - **共享运行时契约**：消息 schema、事件名、API 契约定义在契约仓，被多仓消费——单独画一张契约消费图。
 
 ## 阶段 D：跨仓产出
 
-- `cross-repo-map.md`（用 `templates/cross-repo-map.md.tmpl`）：
-  - 仓库清单表（名称、路径、角色、语言、构建系统）。
-  - 跨仓依赖图（Mermaid，仓库为一等节点）。
-  - 逐边详表：类型、源仓→目标仓、源行、说明。
-  - 契约消费图（哪些仓定义/消费哪些契约）。
-  - 构建/部署拓扑（哪些仓产出哪些产物，谁链接谁）。
-- 顶层 `ARCHITECTURE.md` 中嵌入仓库级架构图（HTML 用手绘内联 SVG，markdown 用 Mermaid）。
-- `AGENTS.md` 中加一段"如何跨仓开发"（改契约时影响谁、如何重建）。
+在 HTML 设计文档中加入独立的"跨仓视图"章（不单独出 `.md` 文件），含：
+
+- 仓库清单表（名称、路径、角色、语言、构建系统）。
+- 跨仓依赖图（Mermaid，仓库为一等节点）。
+- 逐边详表：类型、源仓→目标仓、源行、说明。
+- 契约消费图（哪些仓定义/消费哪些契约）。
+- 构建/部署拓扑（哪些仓产出哪些产物，谁链接谁）。
+- "如何跨仓开发"提示：改契约/共享头时影响谁、按什么顺序重建。
+
+顶层"架构级抽象"章的系统上下文图中，把各仓作为一等节点体现跨仓关系。
 
 ## 注意事项
 
