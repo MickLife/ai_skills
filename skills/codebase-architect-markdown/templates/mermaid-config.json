@@ -1,0 +1,15 @@
+{
+  "theme": "neutral",
+  "securityLevel": "strict",
+  "fontFamily": "Arial, Helvetica, sans-serif",
+  "flowchart": {
+    "htmlLabels": false,
+    "useMaxWidth": true,
+    "curve": "basis"
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "diagramMarginX": 24,
+    "diagramMarginY": 16
+  }
+}
