@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>python-vibeperf | AI 辅助性能优化</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Bricolage Grotesque"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        pyblue: '#306998',
+                        pygold: '#FFD43B',
+                        ink: '#0F172A',
+                        paper: '#F8FAFC',
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'float-delayed': 'float 6s ease-in-out 3s infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(40px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F8FAFC;
+            background-image: radial-gradient(#CBD5E1 1px, transparent 1px);
+            background-size: 32px 32px;
+            color: #0F172A;
+            overflow-x: hidden;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03), 
+                        inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(48, 105, 152, 0.08), 
+                        0 1px 3px rgba(0,0,0,0.05),
+                        inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+            border-color: rgba(48, 105, 152, 0.2);
+        }
+
+        .panel-static:hover {
+            transform: none;
+            box-shadow: 0 8px 34px rgba(15, 23, 42, 0.05),
+                        inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+            border-color: rgba(255, 255, 255, 0.82);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #306998 0%, #1E40AF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stagger-1 { animation-delay: 0.1s; }
+        .stagger-2 { animation-delay: 0.3s; }
+        .stagger-3 { animation-delay: 0.5s; }
+
+        /* Custom decorative elements */
+        .tech-grid {
+            position: absolute;
+            inset: 0;
+            background: 
+                linear-gradient(to right, rgba(48, 105, 152, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(48, 105, 152, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            mask-image: radial-gradient(circle at center, black, transparent 80%);
+            -webkit-mask-image: radial-gradient(circle at center, black, transparent 80%);
+            pointer-events: none;
+        }
+
+        .slide-shell {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 1.5rem;
+            position: relative;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 3.5rem;
+        }
+
+        .section-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(226, 232, 240, 0.95);
+            background: rgba(255, 255, 255, 0.78);
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            color: #64748B;
+        }
+
+        .section-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 999px;
+            flex: 0 0 auto;
+        }
+
+        .section-title {
+            margin-top: 1.5rem;
+            font-size: clamp(2.5rem, 4vw, 3.75rem);
+            line-height: 1;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            color: #0F172A;
+        }
+
+        .section-subtitle {
+            margin-top: 1rem;
+            max-width: 50rem;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+            line-height: 1.8;
+            color: #475569;
+        }
+
+        .section-subtitle-wide {
+            max-width: 56rem;
+        }
+
+        .section-body-grid {
+            position: relative;
+            z-index: 10;
+        }
+
+        .hero-subtitle {
+            color: #475569;
+        }
+
+        .workflow-track {
+            position: absolute;
+            top: 5.5rem;
+            left: 8%;
+            right: 8%;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(48, 105, 152, 0.12), rgba(203, 213, 225, 0.6), rgba(255, 212, 59, 0.2));
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .workflow-track::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(48, 105, 152, 0.85), rgba(96, 165, 250, 0.85), rgba(255, 212, 59, 0.85));
+            transform: translateX(-72%);
+            animation: flowPulse 7s ease-in-out infinite;
+        }
+
+        .workflow-node::before {
+            content: "";
+            position: absolute;
+            top: 4.65rem;
+            left: 50%;
+            width: 14px;
+            height: 14px;
+            border-radius: 999px;
+            transform: translateX(-50%);
+            background: white;
+            border: 2px solid rgba(48, 105, 152, 0.22);
+            box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.7);
+            z-index: 20;
+        }
+
+        .topic-pill {
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid rgba(226, 232, 240, 0.95);
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        @keyframes flowPulse {
+            0%, 100% {
+                transform: translateX(-72%);
+                opacity: 0.75;
+            }
+            50% {
+                transform: translateX(72%);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen relative selection:bg-pyblue selection:text-white">
+
+    <!-- Ambient background glows -->
+    <div class="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-pyblue/10 blur-[100px] animate-float pointer-events-none"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-pygold/10 blur-[100px] animate-float-delayed pointer-events-none"></div>
+
+    <main class="relative z-10">
+        <section class="slide-shell">
+            <div class="max-w-7xl w-full">
+                <!-- Header Section -->
+                <header class="text-center mb-20 opacity-0 animate-slide-up">
+                    <div class="section-kicker">
+                        <span class="section-dot bg-pyblue"></span>
+                        01 / 06 PROJECT OVERVIEW
+                    </div>
+                    <h1 class="text-6xl md:text-8xl font-extrabold tracking-tight mb-6">
+                        <span class="gradient-text">python-vibeperf</span>
+                    </h1>
+                    <p class="hero-subtitle text-xl md:text-2xl font-medium max-w-3xl mx-auto leading-relaxed">
+                        AI 辅助 Python 工程性能优化 Skills
+                    </p>
+                </header>
+
+                <!-- Cards Section -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+                    
+                    <!-- Card 1: Workflow -->
+                    <div class="glass-card rounded-3xl p-8 relative overflow-hidden group opacity-0 animate-slide-up stagger-1">
+                        <div class="tech-grid opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                        
+                        <div class="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mb-8 text-pyblue shadow-inner relative z-10 group-hover:scale-110 transition-transform duration-500">
+                            <i data-lucide="git-merge" class="w-7 h-7"></i>
+                        </div>
+                        
+                        <h2 class="text-2xl font-bold mb-4 relative z-10 text-ink group-hover:text-pyblue transition-colors">完整的优化工作流</h2>
+                        <p class="text-slate-600 leading-relaxed relative z-10">
+                            建立性能基线 <i data-lucide="arrow-right" class="inline w-4 h-4 mx-1 text-slate-400"></i> 深度瓶颈分析 <i data-lucide="arrow-right" class="inline w-4 h-4 mx-1 text-slate-400"></i> 专题迭代优化，打造系统级闭环。
+                        </p>
+
+                        <!-- Decorative mini UI -->
+                        <div class="mt-8 pt-6 border-t border-slate-200/60 relative z-10 h-32 flex flex-col justify-center">
+                            <div class="flex items-start justify-between relative px-2">
+                                <!-- Connecting Line -->
+                                <div class="absolute left-8 right-8 top-4 h-[2px] bg-slate-200/60 rounded-full overflow-hidden z-0">
+                                    <div class="h-full bg-gradient-to-r from-pyblue via-pygold to-amber-500 w-0 group-hover:w-full transition-all duration-1000 ease-out"></div>
+                                </div>
+
+                                <!-- Node 1: Baseline -->
+                                <div class="relative z-10 flex flex-col items-center gap-3">
+                                    <div class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:border-pyblue/40 group-hover:text-pyblue group-hover:shadow-[0_0_12px_rgba(48,105,152,0.2)] transition-all duration-500">
+                                        <i data-lucide="activity" class="w-4 h-4"></i>
+                                    </div>
+                                    <span class="text-[10px] font-mono text-slate-500 bg-white/50 px-1 rounded">1.基线</span>
+                                </div>
+
+                                <!-- Node 2: Analysis -->
+                                <div class="relative z-10 flex flex-col items-center gap-3">
+                                    <div class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:border-pyblue/40 group-hover:text-pyblue group-hover:shadow-[0_0_12px_rgba(48,105,152,0.2)] transition-all duration-500 delay-100">
+                                        <i data-lucide="microscope" class="w-4 h-4"></i>
+                                    </div>
+                                    <span class="text-[10px] font-mono text-slate-500 bg-white/50 px-1 rounded">2.分析</span>
+                                </div>
+
+                                <!-- Node 3: Iteration -->
+                                <div class="relative z-10 flex flex-col items-center gap-3">
+                                    <div class="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-500 group-hover:shadow-[0_0_12px_rgba(251,191,36,0.3)] transition-all duration-500 delay-200 relative">
+                                        <i data-lucide="repeat" class="w-4 h-4 group-hover:animate-[spin_3s_linear_infinite]"></i>
+                                        
+                                        <!-- Topic Badges -->
+                                        <div class="absolute -top-7 -right-6 opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-500 delay-300">
+                                            <span class="bg-white border border-slate-200 text-[9px] font-mono px-1.5 py-0.5 rounded-md shadow-sm text-slate-600 whitespace-nowrap flex items-center gap-1">
+                                                <div class="w-1.5 h-1.5 rounded-full bg-pyblue"></div>NumPy
+                                            </span>
+                                        </div>
+                                        <div class="absolute -bottom-7 -left-4 opacity-0 group-hover:opacity-100 group-hover:translate-y-1 transition-all duration-500 delay-400">
+                                            <span class="bg-white border border-slate-200 text-[9px] font-mono px-1.5 py-0.5 rounded-md shadow-sm text-slate-600 whitespace-nowrap flex items-center gap-1">
+                                                <div class="w-1.5 h-1.5 rounded-full bg-pygold"></div>I/O
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] font-mono text-amber-600 bg-amber-50/50 px-1 rounded">3.迭代</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Memory -->
+                    <div class="glass-card rounded-3xl p-8 relative overflow-hidden group opacity-0 animate-slide-up stagger-2">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-slate-100 to-transparent rounded-bl-full opacity-50"></div>
+                        
+                        <div class="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-8 text-slate-700 shadow-inner relative z-10 group-hover:scale-110 transition-transform duration-500">
+                            <i data-lucide="hard-drive" class="w-7 h-7"></i>
+                        </div>
+                        
+                        <h2 class="text-2xl font-bold mb-4 relative z-10 text-ink group-hover:text-slate-800 transition-colors">长时记忆与状态追踪</h2>
+                        <p class="text-slate-600 leading-relaxed relative z-10">
+                            各阶段使用 <span class="font-mono text-sm bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">Markdown</span> 结构化记录优化进度，确保复杂工程上下文不丢失。
+                        </p>
+
+                        <!-- Decorative mini UI -->
+                        <div class="mt-8 pt-6 border-t border-slate-200/60 relative z-10 font-mono text-xs text-slate-500">
+                            <div class="bg-slate-800 text-slate-300 p-3 rounded-xl shadow-inner overflow-hidden relative">
+                                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pyblue to-pygold"></div>
+                                <div class="flex gap-1.5 mb-2">
+                                    <div class="w-2 h-2 rounded-full bg-red-400/80"></div>
+                                    <div class="w-2 h-2 rounded-full bg-yellow-400/80"></div>
+                                    <div class="w-2 h-2 rounded-full bg-green-400/80"></div>
+                                </div>
+                                <p class="opacity-80">## Phase 2: Asyncio</p>
+                                <p class="opacity-80 mt-1">- [x] Profile I/O bounds</p>
+                                <p class="text-pygold mt-1 flex items-center gap-2">
+                                    <span class="animate-pulse">_</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Evolution -->
+                    <div class="glass-card rounded-3xl p-8 relative overflow-hidden group opacity-0 animate-slide-up stagger-3">
+                        <div class="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-pygold/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        
+                        <div class="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center mb-8 text-amber-500 shadow-inner relative z-10 group-hover:scale-110 transition-transform duration-500">
+                            <i data-lucide="network" class="w-7 h-7"></i>
+                        </div>
+                        
+                        <h2 class="text-2xl font-bold mb-4 relative z-10 text-ink group-hover:text-amber-600 transition-colors">知识库自我进化</h2>
+                        <p class="text-slate-600 leading-relaxed relative z-10">
+                            沉淀实战调优经验，支持随时反写回知识库，实现 AI 辅助能力的持续升级。
+                        </p>
+
+                        <!-- Decorative mini UI -->
+                        <div class="mt-8 pt-6 border-t border-slate-200/60 relative z-10 flex items-center justify-center h-32">
+                            <div class="relative w-full h-full flex items-center justify-center">
+                                <!-- Center Node -->
+                                <div class="w-10 h-10 rounded-full bg-white border-2 border-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.5)] z-20 flex items-center justify-center">
+                                    <i data-lucide="brain" class="w-5 h-5 text-amber-500"></i>
+                                </div>
+                                
+                                <!-- Orbiting Nodes -->
+                                <div class="absolute w-24 h-24 border border-dashed border-slate-300 rounded-full animate-[spin_10s_linear_infinite]">
+                                    <div class="absolute -top-1.5 left-1/2 w-3 h-3 bg-pyblue rounded-full shadow-[0_0_10px_rgba(48,105,152,0.6)]"></div>
+                                </div>
+                                <div class="absolute w-32 h-32 border border-dashed border-slate-200 rounded-full animate-[spin_15s_linear_infinite_reverse]">
+                                    <div class="absolute top-1/2 -right-1.5 w-3 h-3 bg-pygold rounded-full shadow-[0_0_10px_rgba(255,212,59,0.6)]"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <section class="slide-shell">
+            <div class="max-w-7xl w-full">
+                <div class="section-header opacity-0 animate-slide-up">
+                    <div class="section-kicker">
+                        <span class="section-dot bg-sky-500"></span>
+                        02 / 06 DESIGN BACKGROUND
+                    </div>
+                    <h2 class="section-title">
+                        创作背景
+                    </h2>
+                    <p class="section-subtitle section-subtitle-wide">
+                        这个技能的设计出发点，不是重复已有的通用 AI 开发工作流，而是针对 Python 性能优化任务本身的复杂性，补齐流程控制、长上下文管理和经验复用上的缺口。
+                    </p>
+                </div>
+
+                <div class="section-body-grid grid grid-cols-1 xl:grid-cols-[0.92fr_1.08fr] gap-8 items-stretch xl:h-[44rem]">
+                    <section class="glass-card panel-static rounded-[2rem] p-8 md:p-10 relative overflow-hidden h-full flex flex-col">
+                        <div class="tech-grid opacity-60"></div>
+
+                        <div class="flex items-start justify-between gap-4 relative z-10">
+                            <div>
+                                <div class="text-xs font-mono tracking-wide text-slate-400">PROBLEM FRAME</div>
+                                <h3 class="mt-3 text-3xl font-bold text-ink">为什么需要单独设计这个 Skill</h3>
+                            </div>
+                            <div class="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 shadow-inner">
+                                <i data-lucide="lightbulb" class="w-7 h-7"></i>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 relative z-10 flex-1 rounded-[1.5rem] border border-slate-200 bg-white/70 p-6 md:p-7">
+                            <div class="text-xs font-mono tracking-wide text-slate-400">REFERENCE CONTEXT</div>
+                            <p class="mt-4 text-sm leading-7 text-slate-600">
+                                在调研 `Superpowers`、`OpenSpec` 和 `LongTaskForAgent` 之后，可以看到业界已经提供了三类成熟思路：微任务化、文档即上下文、文件系统状态机。这些框架对通用研发任务非常有效，但在性能优化场景中，仍然存在覆盖不完整的问题。
+                            </p>
+
+                            <div class="mt-6 grid grid-cols-1 gap-4">
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                                    <div class="text-[11px] font-mono tracking-wide text-slate-400">已有能力</div>
+                                    <div class="mt-2 text-sm leading-6 text-slate-700">
+                                        结构化提问、计划拆解、文档制品链、长任务状态恢复、自动化循环。
+                                    </div>
+                                </div>
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                                    <div class="text-[11px] font-mono tracking-wide text-slate-400">性能优化的额外要求</div>
+                                    <div class="mt-2 text-sm leading-6 text-slate-700">
+                                        基线采集、热点定位、专题迭代、实验记录、一致性验证，以及优化经验的持续沉淀与跨团队复用。
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 rounded-2xl bg-slate-900 text-slate-200 p-5 font-mono text-[11px] leading-5 shadow-inner">
+                                <div class="text-slate-500">Observation</div>
+                                <div class="mt-2 text-slate-300">
+                                    通用框架提供了工作流骨架，但没有直接覆盖完整的性能优化链路。
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="grid grid-cols-1 gap-6 h-full xl:grid-rows-3">
+                        <article class="glass-card rounded-[1.75rem] p-7 relative overflow-hidden h-full">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-xs font-mono tracking-wide text-slate-400">INSIGHT 01</div>
+                                    <h3 class="mt-3 text-2xl font-bold text-ink">性能优化是复杂综合任务</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-pyblue shadow-inner">
+                                    <i data-lucide="waypoints" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+
+                            <p class="mt-5 text-sm leading-7 text-slate-600">
+                                性能优化不是单次代码修改，而是从基线、分析、专题实验到验证的连续流程。它通常涉及多轮判断和实验，既需要稳定的流程控制，也会持续消耗较长的 Agent 上下文。
+                            </p>
+                        </article>
+
+                        <article class="glass-card rounded-[1.75rem] p-7 relative overflow-hidden h-full">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-xs font-mono tracking-wide text-slate-400">INSIGHT 02</div>
+                                    <h3 class="mt-3 text-2xl font-bold text-ink">现有框架无法直接覆盖完整链路</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-inner">
+                                    <i data-lucide="network" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+
+                            <p class="mt-5 text-sm leading-7 text-slate-600">
+                                `superpowers`、`OpenSpec`、`LongTaskForAgent` 分别擅长流程拆解、文档制品和长任务状态机，但它们没有直接内建性能基线、瓶颈索引、专题优化和性能报告这一整套专用链路，因此需要在这些能力之上进一步封装。
+                            </p>
+                        </article>
+
+                        <article class="glass-card rounded-[1.75rem] p-7 relative overflow-hidden h-full">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-xs font-mono tracking-wide text-slate-400">INSIGHT 03</div>
+                                    <h3 class="mt-3 text-2xl font-bold text-ink">性能经验需要跨业务组复用</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-inner">
+                                    <i data-lucide="share-2" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+
+                            <p class="mt-5 text-sm leading-7 text-slate-600">
+                                很多优化经验并不只属于单个项目，例如 NumPy 向量化、I/O 路径优化、内存管理等模式，应该被抽取成可复用知识，在不同业务组和后续项目之间共享，而不是停留在某次聊天记录或某个成员的个人经验里。
+                            </p>
+                        </article>
+                    </section>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide-shell">
+            <div class="max-w-7xl w-full">
+                <div class="section-header opacity-0 animate-slide-up">
+                    <div class="section-kicker">
+                        <span class="section-dot bg-pyblue"></span>
+                        03 / 06 WORKFLOW OVERVIEW
+                    </div>
+                    <h2 class="section-title">
+                        完整工作流
+                    </h2>
+                    <p class="section-subtitle">
+                        从性能基线到瓶颈定位，再到专题化优化迭代，形成可执行、可记录、可验证的三步流程。
+                    </p>
+                </div>
+
+                <div class="glass-card panel-static rounded-[2rem] p-8 md:p-10 relative overflow-hidden">
+                    <div class="tech-grid opacity-70"></div>
+                    <div class="workflow-track hidden lg:block"></div>
+
+                    <div class="section-body-grid grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 relative">
+                        <article class="workflow-node relative pt-10">
+                            <div class="glass-card rounded-[1.75rem] p-7 h-full relative overflow-hidden">
+                                <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-pyblue/70 via-sky-400/70 to-transparent"></div>
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <div class="text-xs font-mono text-pyblue tracking-wide">STEP 01</div>
+                                        <h3 class="mt-3 text-2xl font-bold text-ink">建立性能基线</h3>
+                                    </div>
+                                    <div class="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-pyblue shadow-inner">
+                                        <i data-lucide="activity" class="w-6 h-6"></i>
+                                    </div>
+                                </div>
+
+                                <p class="mt-5 text-sm leading-7 text-slate-600">
+                                    通过真实运行数据建立当前系统的性能参考面，明确耗时分布、调用链结构和关键指标，避免在缺乏证据的情况下直接修改代码。
+                                </p>
+
+                                <div class="mt-6 space-y-4">
+                                    <div>
+                                        <div class="text-[11px] font-mono tracking-wide text-slate-400">目标</div>
+                                        <div class="mt-1 text-sm text-slate-700">获取可信的初始数据，为后续优化提供比较基准。</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[11px] font-mono tracking-wide text-slate-400">方法</div>
+                                        <div class="mt-1 text-sm text-slate-700">使用 `viztracer` 等工具采样，记录函数耗时、调用频次和热点路径。</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[11px] font-mono tracking-wide text-slate-400">产出</div>
+                                        <div class="mt-1 text-sm text-slate-700">基线报告、追踪数据文件、关键指标摘要。</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="workflow-node relative pt-10">
+                            <div class="glass-card rounded-[1.75rem] p-7 h-full relative overflow-hidden">
+                                <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-400/70 via-pyblue/70 to-transparent"></div>
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <div class="text-xs font-mono text-pyblue tracking-wide">STEP 02</div>
+                                        <h3 class="mt-3 text-2xl font-bold text-ink">性能瓶颈分析</h3>
+                                    </div>
+                                    <div class="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-pyblue shadow-inner">
+                                        <i data-lucide="microscope" class="w-6 h-6"></i>
+                                    </div>
+                                </div>
+
+                                <p class="mt-5 text-sm leading-7 text-slate-600">
+                                    将 Profiling 结果与代码结构、数据路径、算法复杂度结合起来，识别真正限制吞吐和延迟的热点模块，而不是只看表面耗时。
+                                </p>
+
+                                <div class="mt-6 space-y-4">
+                                    <div>
+                                        <div class="text-[11px] font-mono tracking-wide text-slate-400">目标</div>
+                                        <div class="mt-1 text-sm text-slate-700">从整体数据中定位值得投入优化的核心瓶颈。</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[11px] font-mono tracking-wide text-slate-400">方法</div>
+                                        <div class="mt-1 text-sm text-slate-700">结合调用链、热点函数与代码上下文，拆分为算法、I/O、并发、内存等分析方向。</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[11px] font-mono tracking-wide text-slate-400">产出</div>
+                                        <div class="mt-1 text-sm text-slate-700">瓶颈清单、优先级判断、专题优化候选项。</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="workflow-node relative pt-10">
+                            <div class="glass-card rounded-[1.75rem] p-7 h-full relative overflow-hidden">
+                                <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-pygold/80 via-amber-400/80 to-transparent"></div>
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <div class="text-xs font-mono text-amber-600 tracking-wide">STEP 03</div>
+                                        <h3 class="mt-3 text-2xl font-bold text-ink">专题迭代优化</h3>
+                                    </div>
+                                    <div class="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-500 shadow-inner">
+                                        <i data-lucide="repeat" class="w-6 h-6"></i>
+                                    </div>
+                                </div>
+
+                                <p class="mt-5 text-sm leading-7 text-slate-600">
+                                    围绕具体专题逐轮迭代，例如 NumPy 向量化、I/O 路径优化或内存占用控制；每轮都回到基线比较，确认收益与副作用。
+                                </p>
+
+                                <div class="mt-6 space-y-4">
+                                    <div>
+                                        <div class="text-[11px] font-mono tracking-wide text-slate-400">目标</div>
+                                        <div class="mt-1 text-sm text-slate-700">在可控范围内逐步提高性能，并持续验证优化结果。</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[11px] font-mono tracking-wide text-slate-400">方法</div>
+                                        <div class="mt-1 text-sm text-slate-700">按专题拆解需求、实施修改、回归测试，并与前一轮结果进行对比。</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[11px] font-mono tracking-wide text-slate-400">产出</div>
+                                        <div class="mt-1 text-sm text-slate-700">优化方案、实验记录、对比报告与下一轮候选方向。</div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-7 flex flex-wrap gap-2.5">
+                                    <span class="topic-pill rounded-full px-3 py-1 text-[11px] font-mono text-slate-600">专题 A / NumPy</span>
+                                    <span class="topic-pill rounded-full px-3 py-1 text-[11px] font-mono text-slate-600">专题 B / I/O</span>
+                                    <span class="topic-pill rounded-full px-3 py-1 text-[11px] font-mono text-slate-600">专题 C / Memory</span>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide-shell">
+            <div class="max-w-7xl w-full">
+                <div class="section-header opacity-0 animate-slide-up">
+                    <div class="section-kicker">
+                        <span class="section-dot bg-slate-500"></span>
+                        04 / 06 MEMORY AND TRACKING
+                    </div>
+                    <h2 class="section-title">
+                        长时记忆与状态追踪
+                    </h2>
+                    <p class="section-subtitle">
+                        通过 Markdown 产物持续沉淀上下文、阶段状态与分析结论，使优化任务能够跨轮次延续，并支持多人协作交接。
+                    </p>
+                </div>
+
+                <div class="section-body-grid grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-8 items-stretch xl:h-[44rem]">
+                    <section class="glass-card panel-static rounded-[2rem] p-8 md:p-10 relative overflow-hidden h-full flex flex-col min-h-0">
+                        <div class="tech-grid opacity-60"></div>
+
+                        <div class="flex items-start justify-between gap-4 relative z-10">
+                            <div>
+                                <div class="text-xs font-mono tracking-wide text-slate-400">ARTIFACT LAYER</div>
+                                <h3 class="mt-3 text-3xl font-bold text-ink">docs/perf/ 文档体系</h3>
+                            </div>
+                            <div class="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-700 shadow-inner">
+                                <i data-lucide="folder-tree" class="w-7 h-7"></i>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 relative z-10 flex-1 min-h-0">
+                            <div class="rounded-[1.5rem] bg-slate-900 text-slate-200 p-6 shadow-inner overflow-hidden h-full flex flex-col min-h-0">
+                                <div class="absolute hidden"></div>
+                                <div class="flex items-center gap-2 mb-4">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-rose-400/80"></span>
+                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400/80"></span>
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400/80"></span>
+                                    <span class="ml-2 text-[11px] font-mono text-slate-400">docs/perf/</span>
+                                </div>
+
+                                <div class="space-y-1.5 font-mono text-[11px] leading-5 overflow-y-auto pr-2 min-h-0">
+                                    <div class="flex items-center gap-3 text-slate-300">
+                                        <i data-lucide="file-text" class="w-4 h-4 text-sky-300"></i>
+                                        <span>CODEBASE_CONTEXT.md</span>
+                                        <span class="ml-auto rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400">shared</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-slate-300">
+                                        <i data-lucide="folder-open" class="w-4 h-4 text-amber-300"></i>
+                                        <span>rounds/</span>
+                                        <span class="ml-auto rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400">sessions</span>
+                                    </div>
+                                    <div class="pl-7 space-y-2">
+                                        <div class="flex items-center gap-3 text-slate-300">
+                                            <i data-lucide="folder-open" class="w-4 h-4 text-amber-300"></i>
+                                            <span>YYYYMMDD-HHMMSS/</span>
+                                        </div>
+                                        <div class="pl-7 space-y-2">
+                                            <div class="flex items-center gap-3 text-slate-300">
+                                                <i data-lucide="file-text" class="w-4 h-4 text-sky-300"></i>
+                                                <span>PROGRESS.md</span>
+                                            </div>
+                                            <div class="flex items-center gap-3 text-slate-300">
+                                                <i data-lucide="folder-open" class="w-4 h-4 text-amber-300"></i>
+                                                <span>01-baseline/</span>
+                                            </div>
+                                            <div class="pl-7 space-y-2">
+                                                <div class="flex items-center gap-3 text-slate-400">
+                                                    <i data-lucide="file-text" class="w-4 h-4 text-sky-300"></i>
+                                                    <span>BASELINE_REQUEST.md</span>
+                                                </div>
+                                                <div class="flex items-center gap-3 text-slate-400">
+                                                    <i data-lucide="file-text" class="w-4 h-4 text-sky-300"></i>
+                                                    <span>BASELINE_RUN.md</span>
+                                                </div>
+                                                <div class="flex items-center gap-3 text-slate-400">
+                                                    <i data-lucide="folder-open" class="w-4 h-4 text-emerald-300"></i>
+                                                    <span>traces/ trace-*.json</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-3 text-slate-300">
+                                                <i data-lucide="folder-open" class="w-4 h-4 text-amber-300"></i>
+                                                <span>02-bottleneck-analysis/</span>
+                                            </div>
+                                            <div class="pl-7 space-y-2">
+                                                <div class="flex items-center gap-3 text-slate-400">
+                                                    <i data-lucide="file-text" class="w-4 h-4 text-pygold"></i>
+                                                    <span>BASELINE_REPORT-*.md</span>
+                                                </div>
+                                                <div class="flex items-center gap-3 text-slate-400">
+                                                    <i data-lucide="file-text" class="w-4 h-4 text-pygold"></i>
+                                                    <span>BOTTLENECK_INDEX.md</span>
+                                                </div>
+                                                <div class="flex items-center gap-3 text-slate-400">
+                                                    <i data-lucide="file-text" class="w-4 h-4 text-pygold"></i>
+                                                    <span>BOTTLENECK-*.md</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-3 text-slate-300">
+                                                <i data-lucide="folder-open" class="w-4 h-4 text-amber-300"></i>
+                                                <span>03-topic-optimization/</span>
+                                            </div>
+                                            <div class="pl-7 space-y-2">
+                                                <div class="flex items-center gap-3 text-slate-400">
+                                                    <i data-lucide="folder-open" class="w-4 h-4 text-pygold"></i>
+                                                    <span>topic-A-&lt;name&gt;/</span>
+                                                </div>
+                                                <div class="pl-7 space-y-2">
+                                                    <div class="flex items-center gap-3 text-slate-500">
+                                                        <i data-lucide="file-text" class="w-4 h-4 text-pygold"></i>
+                                                        <span>01-REQUIREMENTS.md</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-3 text-slate-500">
+                                                        <i data-lucide="file-text" class="w-4 h-4 text-pygold"></i>
+                                                        <span>02-SOLUTION_DESIGN-*.md</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-3 text-slate-500">
+                                                        <i data-lucide="file-text" class="w-4 h-4 text-pygold"></i>
+                                                        <span>03-OPTIMIZATION_EXECUTION-*.md</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-3 text-slate-500">
+                                                        <i data-lucide="file-text" class="w-4 h-4 text-pygold"></i>
+                                                        <span>... / 06-OPTIMIZATION_REPORT.md</span>
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center gap-3 text-slate-500">
+                                                    <i data-lucide="folder-open" class="w-4 h-4 text-pygold"></i>
+                                                    <span>topic-B-&lt;name&gt;/ ...</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </section>
+
+                    <section class="grid grid-cols-1 gap-6 h-full xl:grid-rows-3">
+                        <article class="glass-card rounded-[1.75rem] p-7 relative overflow-hidden h-full">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-xs font-mono tracking-wide text-slate-400">STATE 01</div>
+                                    <h3 class="mt-3 text-2xl font-bold text-ink">阶段状态可恢复</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-pyblue shadow-inner">
+                                    <i data-lucide="history" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+
+                            <p class="mt-5 text-sm leading-7 text-slate-600">
+                                每一阶段都形成独立的 Markdown 记录，包含当前目标、关键发现、未完成事项和下一步建议。任务中断后可以直接从文档恢复状态，而不依赖上下文窗口残留信息。
+                            </p>
+                        </article>
+
+                        <article class="glass-card rounded-[1.75rem] p-7 relative overflow-hidden h-full">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-xs font-mono tracking-wide text-slate-400">STATE 02</div>
+                                    <h3 class="mt-3 text-2xl font-bold text-ink">阶段之间有清晰边界</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-700 shadow-inner">
+                                    <i data-lucide="blocks" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+
+                            <p class="mt-5 text-sm leading-7 text-slate-600">
+                                基线、分析、专题优化分别沉淀为不同层级的文档和数据产物。这样既能保留完整主线，也能防止不同轮次的实验结论相互覆盖或混淆。
+                            </p>
+                        </article>
+
+                        <article class="glass-card rounded-[1.75rem] p-7 relative overflow-hidden h-full">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-xs font-mono tracking-wide text-slate-400">STATE 03</div>
+                                    <h3 class="mt-3 text-2xl font-bold text-ink">支持协作与交接</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-inner">
+                                    <i data-lucide="git-branch-plus" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+
+                            <p class="mt-5 text-sm leading-7 text-slate-600">
+                                结构化文档不仅服务于当前 Agent，也便于后续开发者或新的 Agent 接手任务。交接时只需读取已有产物，就能理解当前进度、历史决策和剩余问题。
+                            </p>
+                        </article>
+                    </section>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide-shell">
+            <div class="max-w-7xl w-full">
+                <div class="section-header opacity-0 animate-slide-up">
+                    <div class="section-kicker">
+                        <span class="section-dot bg-amber-500"></span>
+                        05 / 06 KNOWLEDGE EVOLUTION
+                    </div>
+                    <h2 class="section-title">
+                        知识库自我进化
+                    </h2>
+                    <p class="section-subtitle">
+                        优化过程不仅消费既有知识，也可以在任务结束后把新的经验反写回知识库，使技能随项目实践持续演进。
+                    </p>
+                </div>
+
+                <div class="section-body-grid grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-8 items-stretch xl:h-[44rem]">
+                    <section class="glass-card panel-static rounded-[2rem] p-8 md:p-10 relative overflow-hidden h-full flex flex-col min-h-0">
+                        <div class="tech-grid opacity-60"></div>
+
+                        <div class="flex items-start justify-between gap-4 relative z-10">
+                            <div>
+                                <div class="text-xs font-mono tracking-wide text-slate-400">KNOWLEDGE LAYER</div>
+                                <h3 class="mt-3 text-3xl font-bold text-ink">skills/python-vibeperf/knowledge/</h3>
+                            </div>
+                            <div class="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-inner">
+                                <i data-lucide="database-zap" class="w-7 h-7"></i>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 relative z-10 flex-1 min-h-0">
+                            <div class="rounded-[1.5rem] bg-slate-900 text-slate-200 p-6 shadow-inner overflow-hidden h-full flex flex-col min-h-0">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-rose-400/80"></span>
+                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400/80"></span>
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400/80"></span>
+                                    <span class="ml-2 text-[11px] font-mono text-slate-400">knowledge/</span>
+                                </div>
+
+                                <div class="overflow-y-auto pr-2 min-h-0 space-y-5">
+                                    <div>
+                                        <div class="text-[11px] font-mono tracking-wide text-slate-500 mb-2">INDEX</div>
+                                        <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                                            <div class="flex items-center gap-3 text-slate-300 font-mono text-[11px] leading-5">
+                                                <i data-lucide="file-text" class="w-4 h-4 text-sky-300"></i>
+                                                <span>INDEX.md</span>
+                                            </div>
+                                            <div class="mt-3 pl-7 space-y-1.5 font-mono text-[11px] leading-5 text-slate-400">
+                                                <div>核心策略</div>
+                                                <div>数据结构与基础语法</div>
+                                                <div>并发与 I/O</div>
+                                                <div>内存管理</div>
+                                                <div>向量化与数值计算</div>
+                                                <div class="text-pygold">特定库与领域经验</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div class="text-[11px] font-mono tracking-wide text-slate-500 mb-2">BASE CATEGORIES</div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 font-mono text-[11px] leading-5 text-slate-300">
+                                                <div class="flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4 text-sky-300"></i><span>core-strategies.md</span></div>
+                                                <div class="mt-2 text-slate-500">先 Profile，后优化</div>
+                                            </div>
+                                            <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 font-mono text-[11px] leading-5 text-slate-300">
+                                                <div class="flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4 text-sky-300"></i><span>data-structures.md</span></div>
+                                                <div class="mt-2 text-slate-500">算法与结构优先</div>
+                                            </div>
+                                            <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 font-mono text-[11px] leading-5 text-slate-300">
+                                                <div class="flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4 text-sky-300"></i><span>concurrency-and-io.md</span></div>
+                                                <div class="mt-2 text-slate-500">并发、异步与 I/O</div>
+                                            </div>
+                                            <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 font-mono text-[11px] leading-5 text-slate-300">
+                                                <div class="flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4 text-sky-300"></i><span>memory-management.md</span></div>
+                                                <div class="mt-2 text-slate-500">内存分配与生命周期</div>
+                                            </div>
+                                            <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 font-mono text-[11px] leading-5 text-slate-300 md:col-span-2">
+                                                <div class="flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4 text-sky-300"></i><span>vectorization.md</span></div>
+                                                <div class="mt-2 text-slate-500">NumPy 等向量化计算策略</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div class="text-[11px] font-mono tracking-wide text-slate-500 mb-2">DYNAMIC EXTENSION</div>
+                                        <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 font-mono text-[11px] leading-5">
+                                            <div class="flex items-center gap-2 text-slate-300">
+                                                <i data-lucide="sparkles" class="w-4 h-4 text-pygold"></i>
+                                                <span>&lt;dynamic_category&gt;.md</span>
+                                            </div>
+                                            <div class="mt-2 text-slate-500">例如 `numpy.md`、`pandas.md`、`open3d.md`</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="grid grid-cols-1 gap-6 h-full xl:grid-rows-3">
+                        <article class="glass-card rounded-[1.75rem] p-7 relative overflow-hidden h-full">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-xs font-mono tracking-wide text-slate-400">EVOLVE 01</div>
+                                    <h3 class="mt-3 text-2xl font-bold text-ink">优化前先查阅知识库</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-pyblue shadow-inner">
+                                    <i data-lucide="book-open-text" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+
+                            <p class="mt-5 text-sm leading-7 text-slate-600">
+                                Agent 在执行性能优化时，会先查阅 `knowledge/` 中已有的策略与分类经验，把通用方法论和常见优化模式作为决策参考，而不是每次从零开始推断。
+                            </p>
+                        </article>
+
+                        <article class="glass-card rounded-[1.75rem] p-7 relative overflow-hidden h-full">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-xs font-mono tracking-wide text-slate-400">EVOLVE 02</div>
+                                    <h3 class="mt-3 text-2xl font-bold text-ink">独立技能负责经验回写</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-inner">
+                                    <i data-lucide="workflow" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+
+                            <p class="mt-5 text-sm leading-7 text-slate-600">
+                                完成优化后，可通过独立的 `python-vibeperf-evolution` 技能收集场景、原始写法、优化写法和提升效果，再将这条经验格式化并写入对应的知识分类文件。
+                            </p>
+                        </article>
+
+                        <article class="glass-card rounded-[1.75rem] p-7 relative overflow-hidden h-full">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-xs font-mono tracking-wide text-slate-400">EVOLVE 03</div>
+                                    <h3 class="mt-3 text-2xl font-bold text-ink">分类与索引同步扩展</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-inner">
+                                    <i data-lucide="git-pull-request-arrow" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+
+                            <p class="mt-5 text-sm leading-7 text-slate-600">
+                                如果经验属于新的特定库或领域，会动态创建新的 Markdown 分类文件，并同步更新 `INDEX.md` 中的索引入口，保证知识库可以持续扩展而不破坏原有结构。
+                            </p>
+                        </article>
+                    </section>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide-shell">
+            <div class="max-w-7xl w-full">
+                <div class="section-header opacity-0 animate-slide-up">
+                    <div class="section-kicker">
+                        <span class="section-dot bg-pyblue"></span>
+                        06 / 06 SYSTEM CLOSURE
+                    </div>
+                    <h2 class="section-title">
+                        总结
+                    </h2>
+                    <p class="section-subtitle">
+                        `python-vibeperf` 将优化执行、状态沉淀与知识演进串联为统一闭环，使每一轮性能优化都能成为下一轮工作的输入。
+                    </p>
+                </div>
+
+                <div class="glass-card panel-static rounded-[2rem] p-8 md:p-10 relative overflow-hidden">
+                    <div class="tech-grid opacity-60"></div>
+
+                    <div class="section-body-grid grid grid-cols-1 xl:grid-cols-[0.95fr_1.1fr] gap-8 items-center">
+                        <section class="space-y-5">
+                            <div class="glass-card rounded-[1.75rem] p-6">
+                                <div class="text-xs font-mono tracking-wide text-slate-400">CLOSURE</div>
+                                <h3 class="mt-3 text-3xl font-bold text-ink">从单次优化到持续进化</h3>
+                                <p class="mt-4 text-sm leading-7 text-slate-600">
+                                    这个技能体系不是一次性的性能排查脚本，而是一套可以长期运行的工程化方法：先执行三步优化流程，再把产物沉淀为可恢复状态，并在任务结束后把新增经验写回知识库。
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="rounded-2xl border border-slate-200 bg-white/80 p-5">
+                                    <div class="text-[11px] font-mono tracking-wide text-slate-400">输入</div>
+                                    <div class="mt-2 text-sm leading-6 text-slate-700">项目代码、运行数据、轮次产物、既有知识库。</div>
+                                </div>
+                                <div class="rounded-2xl border border-slate-200 bg-white/80 p-5">
+                                    <div class="text-[11px] font-mono tracking-wide text-slate-400">输出</div>
+                                    <div class="mt-2 text-sm leading-6 text-slate-700">优化方案、过程文档、对比结果、可复用经验。</div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-2xl border border-slate-200 bg-white/80 p-5">
+                                <div class="text-[11px] font-mono tracking-wide text-slate-400">结果</div>
+                                <div class="mt-2 text-sm leading-7 text-slate-700">
+                                    每一轮优化都会留下可验证的证据、可恢复的状态和可复用的知识，使后续任务不必从零开始。
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="relative min-h-[34rem] flex items-center justify-center">
+                            <div class="relative w-full max-w-[42rem] aspect-square">
+                                <div class="absolute inset-[17%] rounded-full border border-dashed border-slate-300"></div>
+                                <div class="absolute inset-[25%] rounded-full border border-slate-200"></div>
+                                <div class="absolute inset-0 pointer-events-none">
+                                    <div class="absolute top-[9%] left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-pyblue shadow-[0_0_14px_rgba(48,105,152,0.35)]"></div>
+                                    <div class="absolute right-[10%] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.35)]"></div>
+                                    <div class="absolute bottom-[9%] left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400 shadow-[0_0_14px_rgba(148,163,184,0.35)]"></div>
+                                    <div class="absolute left-[10%] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.35)]"></div>
+                                </div>
+
+                                <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-44 rounded-full bg-white/90 border border-slate-200 shadow-[0_18px_60px_rgba(15,23,42,0.08)] flex flex-col items-center justify-center text-center px-6">
+                                    <div class="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-pyblue mb-4">
+                                        <i data-lucide="cpu" class="w-6 h-6"></i>
+                                    </div>
+                                    <div class="text-sm font-mono tracking-wide text-slate-400">python-vibeperf</div>
+                                    <div class="mt-2 text-lg font-bold text-ink">优化闭环</div>
+                                </div>
+
+                                <article class="absolute left-1/2 top-0 -translate-x-1/2 glass-card rounded-[1.5rem] p-5 w-60 text-center">
+                                    <div class="mx-auto w-11 h-11 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-pyblue shadow-inner">
+                                        <i data-lucide="activity" class="w-5 h-5"></i>
+                                    </div>
+                                    <h3 class="mt-4 text-lg font-bold text-ink">工作流执行</h3>
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">建立基线、瓶颈分析、专题迭代优化。</p>
+                                </article>
+
+                                <article class="absolute right-0 top-1/2 -translate-y-1/2 glass-card rounded-[1.5rem] p-5 w-60 text-center">
+                                    <div class="mx-auto w-11 h-11 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-700 shadow-inner">
+                                        <i data-lucide="scroll-text" class="w-5 h-5"></i>
+                                    </div>
+                                    <h3 class="mt-4 text-lg font-bold text-ink">状态沉淀</h3>
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">在 `docs/perf/` 中保存轮次、阶段与实验产物。</p>
+                                </article>
+
+                                <article class="absolute left-1/2 bottom-0 -translate-x-1/2 glass-card rounded-[1.5rem] p-5 w-60 text-center">
+                                    <div class="mx-auto w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-inner">
+                                        <i data-lucide="database-zap" class="w-5 h-5"></i>
+                                    </div>
+                                    <h3 class="mt-4 text-lg font-bold text-ink">知识回写</h3>
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">通过 `python-vibeperf-evolution` 把经验写入知识库。</p>
+                                </article>
+
+                                <article class="absolute left-0 top-1/2 -translate-y-1/2 glass-card rounded-[1.5rem] p-5 w-60 text-center">
+                                    <div class="mx-auto w-11 h-11 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600 shadow-inner">
+                                        <i data-lucide="book-marked" class="w-5 h-5"></i>
+                                    </div>
+                                    <h3 class="mt-4 text-lg font-bold text-ink">下一轮复用</h3>
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">后续优化直接读取历史产物和知识分类继续推进。</p>
+                                </article>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>

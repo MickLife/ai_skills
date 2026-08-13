@@ -44,6 +44,8 @@ dev_skills/
 | `codebase-architect` | 分析 Python/C/C++ 单仓或多仓代码，生成按需视图组织的 HTML 架构设计文档。 |
 | `codebase-architect-markdown` | 分析 Python/C/C++ 单仓或多仓代码，生成 Markdown 架构设计文档，并以 Mermaid/SVG 混合模式兼容 OpenCode、Gitee 和 GitHub。 |
 | `cloud-map-quality-qc` | 检查云图/地图类观察结果、图层关系和输出质量。 |
+| `python-vibeperf` | Python 工程系统级性能分析与优化：建立基线、定位瓶颈、专题迭代，附知识库自我进化。 |
+| `python-vibeperf-evolution` | python-vibeperf 配套技能：验证并沉淀性能优化经验到知识库。 |
 
 ## Markdown 架构图兼容性
 
