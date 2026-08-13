@@ -5,7 +5,7 @@ import os
 import time
 import numpy as np
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'docs', 'python-vibeperf'))
 
 from examples.lidar_rasterization_optimized import generate_lidar_points
 
