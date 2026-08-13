@@ -7,7 +7,8 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ROOT = REPO_ROOT / "skills" / "dead-code-scanner"
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import compare_waves  # noqa: E402
